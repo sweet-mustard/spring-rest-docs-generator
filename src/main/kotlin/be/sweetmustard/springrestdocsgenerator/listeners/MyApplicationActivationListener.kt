@@ -1,4 +1,4 @@
-package com.github.pietersenden.springrestdocsgenerator.listeners
+package be.sweetmustard.springrestdocsgenerator.listeners
 
 import com.intellij.openapi.application.ApplicationActivationListener
 import com.intellij.openapi.diagnostic.thisLogger

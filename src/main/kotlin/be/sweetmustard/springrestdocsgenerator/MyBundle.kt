@@ -1,4 +1,4 @@
-package com.github.pietersenden.springrestdocsgenerator
+package be.sweetmustard.springrestdocsgenerator
 
 import com.intellij.DynamicBundle
 import org.jetbrains.annotations.NonNls

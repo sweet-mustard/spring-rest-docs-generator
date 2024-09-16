@@ -1,9 +1,9 @@
-package com.github.pietersenden.springrestdocsgenerator.services
+package be.sweetmustard.springrestdocsgenerator.services
 
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
-import com.github.pietersenden.springrestdocsgenerator.MyBundle
+import be.sweetmustard.springrestdocsgenerator.MyBundle
 
 @Service(Service.Level.PROJECT)
 class MyProjectService(project: Project) {
