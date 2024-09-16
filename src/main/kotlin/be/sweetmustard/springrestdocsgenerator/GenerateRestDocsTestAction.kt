@@ -26,9 +26,21 @@ class GenerateRestDocsTestAction : AnAction() {
             
             val requestMappingType =
                 requestMappingOfMethod.resolveAnnotationType()?.name?.removeSuffix("Mapping")
+
+            val pathParameters = selectedMethod.parameterList.parameters.filter {
+                it.annotations.stream()
+                    .anyMatch { psiAnn ->
+                        psiAnn.qualifiedName?.contains("org.springframework.web.bind.annotation.PathVariable")
+                            ?: false
+                    }
+            }
             
             var methodBody =
-                "mockMvc.perform(${requestMappingType?.toLowerCasePreservingASCIIRules()}(\"$requestUri\"))"
+                "mockMvc.perform(${requestMappingType?.toLowerCasePreservingASCIIRules()}(\"$requestUri\""
+            if (pathParameters.isNotEmpty()) {
+                methodBody += ", ".repeat(pathParameters.size)
+            }
+            methodBody += ")\n"
             println(methodBody)
         }
     }
