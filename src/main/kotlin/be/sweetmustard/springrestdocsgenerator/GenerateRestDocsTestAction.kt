@@ -34,11 +34,27 @@ class GenerateRestDocsTestAction : AnAction() {
                             ?: false
                     }
             }
+
+            val queryParameters = selectedMethod.parameterList.parameters.filter {
+                it.annotations.stream()
+                    .anyMatch { psiAnn ->
+                        psiAnn.qualifiedName?.contains("org.springframework.web.bind.annotation.RequestParam")
+                            ?: false
+                    }
+            }
+            
             
             var methodBody =
                 "mockMvc.perform(${requestMappingType?.toLowerCasePreservingASCIIRules()}(\"$requestUri\""
             if (pathParameters.isNotEmpty()) {
                 methodBody += ", ".repeat(pathParameters.size)
+            }
+            methodBody += ")\n"
+            if (queryParameters.isNotEmpty()) {
+                methodBody += queryParameters.stream()
+                    .map { param -> ".param(\"${param.name}\", )" }
+                    .reduce { a, b -> "$a\n$b" }
+                    .orElse("")
             }
             methodBody += ")\n"
             println(methodBody)
