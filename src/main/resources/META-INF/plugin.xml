@@ -10,7 +10,6 @@
     <resource-bundle>messages.MyBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow factoryClass="be.sweetmustard.springrestdocsgenerator.toolWindow.MyToolWindowFactory" id="MyToolWindow"/>
     </extensions>
 
     <actions>
