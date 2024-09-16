@@ -42,7 +42,16 @@ class GenerateRestDocsTestAction : AnAction() {
                             ?: false
                     }
             }
-            
+
+            val requestObject = selectedMethod.parameterList.parameters.filter {
+                it.annotations.stream()
+                    .anyMatch { psiAnn ->
+                        psiAnn.qualifiedName?.contains("org.springframework.web.bind.annotation.RequestBody")
+                            ?: false
+                    }
+            }.firstOrNull()
+
+            val requestObjectClass = PsiTypesUtil.getPsiClass(requestObject?.type)
             
             var methodBody =
                 "mockMvc.perform(${requestMappingType?.toLowerCasePreservingASCIIRules()}(\"$requestUri\""
@@ -55,8 +64,20 @@ class GenerateRestDocsTestAction : AnAction() {
                     .map { param -> ".param(\"${param.name}\", )" }
                     .reduce { a, b -> "$a\n$b" }
                     .orElse("")
+                methodBody += "\n"
+            }
+            if (requestObjectClass != null) {
+                val requestObjectFields = requestObjectClass.fields
+                methodBody += ".contentType(MediaType.APPLICATION_JSON)\n"
+                methodBody += ".content(\"\"\"\n{\n"
+                methodBody += requestObjectFields.stream()
+                    .map { field -> "\"${field.name}\":" }
+                    .reduce { a: String, b: String -> "$a,\n$b" }
+                    .orElse("")
+                methodBody += "\n}\n\"\"\")\n"
             }
             methodBody += ")\n"
+            
             println(methodBody)
         }
     }
