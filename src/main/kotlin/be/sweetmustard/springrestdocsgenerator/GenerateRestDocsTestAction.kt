@@ -52,6 +52,16 @@ class GenerateRestDocsTestAction : AnAction() {
             }.firstOrNull()
 
             val requestObjectClass = PsiTypesUtil.getPsiClass(requestObject?.type)
+
+            val responseStatus = selectedMethod.modifierList.annotations.filter {
+                it.qualifiedName?.equals("org.springframework.web.bind.annotation.ResponseStatus")
+                    ?: false
+            }.toList()
+            val httpStatus: String? = if (responseStatus.isEmpty()) {
+                "OK"
+            } else {
+                responseStatus.first().parameterList.attributes[0].value?.text
+            }
             
             var methodBody =
                 "mockMvc.perform(${requestMappingType?.toLowerCasePreservingASCIIRules()}(\"$requestUri\""
@@ -77,7 +87,9 @@ class GenerateRestDocsTestAction : AnAction() {
                 methodBody += "\n}\n\"\"\")\n"
             }
             methodBody += ")\n"
-            
+            methodBody += ".andExpect(status().is" + httpStatus?.removePrefix("HttpStatus.")
+                ?.toLowerCasePreservingASCIIRules()
+                ?.replaceFirstChar { c -> c.uppercaseChar() } + "())\n"
             println(methodBody)
         }
     }
