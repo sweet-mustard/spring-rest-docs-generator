@@ -63,50 +63,50 @@ class GenerateRestDocsTestAction : AnAction() {
                 responseStatus.first().parameterList.attributes[0].value?.text
             }
 
+            val methodBodyBuilder = StringBuilder()
+
             val responseObject = PsiTypesUtil.getPsiClass(selectedMethod.returnType)
             
-            var methodBody =
-                "mockMvc.perform(${requestMappingType?.toLowerCasePreservingASCIIRules()}(\"$requestUri\""
+            methodBodyBuilder.append("mockMvc.perform(${requestMappingType?.toLowerCasePreservingASCIIRules()}(\"$requestUri\"")
             if (pathParameters.isNotEmpty()) {
-                methodBody += ", ".repeat(pathParameters.size)
+                methodBodyBuilder.append(", ".repeat(pathParameters.size))
             }
-            methodBody += ")\n"
+            methodBodyBuilder.appendLine(")")
             if (queryParameters.isNotEmpty()) {
-                methodBody += queryParameters.stream()
+                methodBodyBuilder.appendLine(queryParameters.stream()
                     .map { param -> ".param(\"${param.name}\", )" }
                     .reduce { a, b -> "$a\n$b" }
-                    .orElse("")
-                methodBody += "\n"
+                    .orElse(""))
             }
             if (requestObjectClass != null) {
                 val requestObjectFields = requestObjectClass.fields
-                methodBody += ".contentType(MediaType.APPLICATION_JSON)\n"
-                methodBody += ".content(\"\"\"\n{\n"
-                methodBody += requestObjectFields.stream()
+                methodBodyBuilder.appendLine("request.contentType(MediaType.APPLICATION_JSON)")
+                methodBodyBuilder.appendLine(".content(\"\"\"\n{")
+                methodBodyBuilder.appendLine(requestObjectFields.stream()
                     .map { field -> "\"${field.name}\":" }
                     .reduce { a: String, b: String -> "$a,\n$b" }
-                    .orElse("")
-                methodBody += "\n}\n\"\"\")\n"
+                    .orElse(""))
+                methodBodyBuilder.appendLine("}\n\"\"\")")
             }
-            methodBody += ")\n"
-            methodBody += ".andExpect(status().is" + httpStatus?.removePrefix("HttpStatus.")
+            methodBodyBuilder.appendLine(")")
+            methodBodyBuilder.appendLine(".andExpect(status().is" + httpStatus?.removePrefix("HttpStatus.")
                 ?.toLowerCasePreservingASCIIRules()
-                ?.replaceFirstChar { c -> c.uppercaseChar() } + "())\n"
-            methodBody += ".andDo(document(\"${selectedMethod.name.camelToKebabCase()}\",\n"
+                ?.replaceFirstChar { c -> c.uppercaseChar() } + "())")
+            methodBodyBuilder.appendLine(".andDo(document(\"${selectedMethod.name.camelToKebabCase()}\",")
             if (pathParameters.isNotEmpty()) {
-                methodBody += generatePathParametersDocumentation(pathParameters)
+                methodBodyBuilder.append(generatePathParametersDocumentation(pathParameters))
             }
             if (queryParameters.isNotEmpty()) {
-                methodBody += generateQueryParametersDocumentation(queryParameters)
+                methodBodyBuilder.append(generateQueryParametersDocumentation(queryParameters))
             }
             if (requestObjectClass != null) {
-                methodBody += generateRequestObjectDocumentation(requestObjectClass)
+                methodBodyBuilder.append(generateRequestObjectDocumentation(requestObjectClass))
             }
             if (responseObject != null) {
-                methodBody += generateResponseObjectDocumentation(responseObject)
+                methodBodyBuilder.append(generateResponseObjectDocumentation(responseObject))
             }
-            methodBody += ");"
-            println(methodBody)
+            methodBodyBuilder.append(");")
+            println(methodBodyBuilder.toString())
         }
     }
 
