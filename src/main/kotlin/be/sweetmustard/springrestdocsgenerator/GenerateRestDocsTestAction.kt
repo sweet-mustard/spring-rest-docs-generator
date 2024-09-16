@@ -107,6 +107,15 @@ class GenerateRestDocsTestAction : AnAction() {
                     .orElse("")
                 methodBody += "\n)\n"
             }
+            if (requestObjectClass != null) {
+                val requestObjectFields = requestObjectClass.fields
+                methodBody += "requestFields(\n"
+                methodBody += requestObjectFields.stream()
+                    .map { param -> "fieldWithPath(\"${param.name}\").description(\"\")" }
+                    .reduce { a, b -> "$a\n$b" }
+                    .orElse("")
+                methodBody += "\n)\n"
+            }
             println(methodBody)
         }
     }
