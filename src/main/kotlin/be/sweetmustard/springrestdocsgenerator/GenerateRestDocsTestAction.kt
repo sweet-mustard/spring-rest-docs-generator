@@ -90,6 +90,7 @@ class GenerateRestDocsTestAction : AnAction() {
             methodBody += ".andExpect(status().is" + httpStatus?.removePrefix("HttpStatus.")
                 ?.toLowerCasePreservingASCIIRules()
                 ?.replaceFirstChar { c -> c.uppercaseChar() } + "())\n"
+            methodBody += ".andDo(document(\"${selectedMethod.name.camelToKebabCase()}\",\n"
             println(methodBody)
         }
     }
@@ -126,5 +127,10 @@ class GenerateRestDocsTestAction : AnAction() {
             return ""
         }
         return uri.literalValue
+    }
+    
+    private fun String.camelToKebabCase(): String {
+        val pattern = "(?<=.)[A-Z]".toRegex()
+        return this.replace(pattern, "-$0").lowercase()
     }
 }
