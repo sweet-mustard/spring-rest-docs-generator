@@ -91,6 +91,22 @@ class GenerateRestDocsTestAction : AnAction() {
                 ?.toLowerCasePreservingASCIIRules()
                 ?.replaceFirstChar { c -> c.uppercaseChar() } + "())\n"
             methodBody += ".andDo(document(\"${selectedMethod.name.camelToKebabCase()}\",\n"
+            if (pathParameters.isNotEmpty()) {
+                methodBody += "pathParameters(\n"
+                methodBody += pathParameters.stream()
+                    .map { param -> "parameterWithName(\"${param.name}\").description(\"\")" }
+                    .reduce { a, b -> "$a\n$b" }
+                    .orElse("")
+                methodBody += "\n)\n"
+            }
+            if (queryParameters.isNotEmpty()) {
+                methodBody += "queryParameters(\n"
+                methodBody += queryParameters.stream()
+                    .map { param -> "parameterWithName(\"${param.name}\").description(\"\")" }
+                    .reduce { a, b -> "$a\n$b" }
+                    .orElse("")
+                methodBody += "\n)\n"
+            }
             println(methodBody)
         }
     }
