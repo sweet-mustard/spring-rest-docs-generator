@@ -62,6 +62,8 @@ class GenerateRestDocsTestAction : AnAction() {
             } else {
                 responseStatus.first().parameterList.attributes[0].value?.text
             }
+
+            val responseObject = PsiTypesUtil.getPsiClass(selectedMethod.returnType)
             
             var methodBody =
                 "mockMvc.perform(${requestMappingType?.toLowerCasePreservingASCIIRules()}(\"$requestUri\""
@@ -116,6 +118,16 @@ class GenerateRestDocsTestAction : AnAction() {
                     .orElse("")
                 methodBody += "\n)\n"
             }
+            if (responseObject != null) {
+                val responseObjectFields = responseObject.fields
+                methodBody += "responseFields(\n"
+                methodBody += responseObjectFields.stream()
+                    .map { param -> "fieldWithPath(\"${param.name}\").description(\"\")" }
+                    .reduce { a, b -> "$a\n$b" }
+                    .orElse("")
+                methodBody += "\n)\n"
+            }
+            methodBody += ");"
             println(methodBody)
         }
     }
