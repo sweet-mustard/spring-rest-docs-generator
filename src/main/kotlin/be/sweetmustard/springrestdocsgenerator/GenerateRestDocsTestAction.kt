@@ -9,6 +9,7 @@ import com.intellij.psi.util.PsiTypesUtil
 import com.intellij.psi.util.PsiUtil
 import com.intellij.psi.util.childrenOfType
 import com.intellij.psi.util.parentOfType
+import com.intellij.util.containers.getIfSingle
 import com.intellij.util.containers.stream
 import io.ktor.util.*
 
@@ -135,21 +136,29 @@ class GenerateRestDocsTestAction : AnAction() {
 
         val elementFactory = JavaPsiFacade.getInstance(selectedMethod.project).elementFactory
 
-        val documentationTestMethod =
-            elementFactory.createMethod(selectedMethod.name + "Example", PsiTypes.voidType())
-        PsiUtil.addException(documentationTestMethod, "Exception")
-        documentationTestMethod.modifierList.addAnnotation("Test")
-        PsiUtil.setModifierProperty(documentationTestMethod, PsiModifier.PACKAGE_LOCAL, true)
-        documentationTestMethod.body!!.add(
-            elementFactory.createStatementFromText(
-                methodBody,
-                documentationTestMethod
+        val documentationTestName = selectedMethod.name + "Example"
+
+        var documentationTestMethod = documentationTest?.methods.stream()
+            .filter { it.name == documentationTestName }
+            .getIfSingle()
+
+        if (documentationTestMethod == null) {
+            documentationTestMethod =
+                elementFactory.createMethod(documentationTestName, PsiTypes.voidType())
+            PsiUtil.addException(documentationTestMethod, "Exception")
+            documentationTestMethod.modifierList.addAnnotation("Test")
+            PsiUtil.setModifierProperty(documentationTestMethod, PsiModifier.PACKAGE_LOCAL, true)
+            documentationTestMethod.body!!.add(
+                elementFactory.createStatementFromText(
+                    methodBody,
+                    documentationTestMethod
+                )
             )
-        )
-        WriteCommandAction.runWriteCommandAction(selectedMethod.project) {
-            documentationTest?.add(
-                documentationTestMethod
-            )
+            WriteCommandAction.runWriteCommandAction(selectedMethod.project) {
+                documentationTest?.add(
+                    documentationTestMethod
+                )
+            }
         }
     }
 
