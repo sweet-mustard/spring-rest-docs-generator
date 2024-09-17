@@ -160,6 +160,8 @@ class GenerateRestDocsTestAction : AnAction() {
                 )
             }
         }
+        documentationTestMethod.navigate(true)
+        
     }
 
     private fun generateQueryParametersDocumentation(queryParameters: List<PsiParameter>): String {
