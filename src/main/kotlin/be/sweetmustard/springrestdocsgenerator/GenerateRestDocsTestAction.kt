@@ -3,8 +3,12 @@ package be.sweetmustard.springrestdocsgenerator
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.patterns.PsiJavaPatterns.psiClass
 import com.intellij.psi.*
 import com.intellij.psi.util.PsiTypesUtil
+import com.intellij.psi.util.PsiUtil
+import com.intellij.psi.util.childrenOfType
 import com.intellij.psi.util.parentOfType
 import com.intellij.util.containers.stream
 import io.ktor.util.*
@@ -57,6 +61,7 @@ class GenerateRestDocsTestAction : AnAction() {
                 it.qualifiedName?.equals("org.springframework.web.bind.annotation.ResponseStatus")
                     ?: false
             }.toList()
+            
             val httpStatus: String? = if (responseStatus.isEmpty()) {
                 "OK"
             } else {
@@ -106,7 +111,27 @@ class GenerateRestDocsTestAction : AnAction() {
                 methodBodyBuilder.append(generateResponseObjectDocumentation(responseObject))
             }
             methodBodyBuilder.append(");")
-            println(methodBodyBuilder.toString())
+            val methodBody = methodBodyBuilder.toString()
+
+            val restController = selectedMethod.parentOfType<PsiClass>()!!
+
+            val possibleTestSourceRoots = RestDocsHelper.getPossibleTestSourceRoots(restController)
+            val testSourceRoot = possibleTestSourceRoots[0]
+            val documentationTest = RestDocsHelper.getCorrespondingDocumentationTest(
+                testSourceRoot,
+                restController
+            )?.childrenOfType<PsiClass>()?.get(0)
+            
+            val elementFactory = JavaPsiFacade.getInstance(selectedMethod.project).elementFactory
+
+            val documentationTestMethod =
+                elementFactory.createMethod(selectedMethod.name + "Example", PsiTypes.voidType())
+            PsiUtil.addException(documentationTestMethod, "Exception")
+            documentationTestMethod.modifierList.addAnnotation("Test")
+            PsiUtil.setModifierProperty(documentationTestMethod, PsiModifier.PACKAGE_LOCAL, true)
+            documentationTestMethod.body!!.add(elementFactory.createStatementFromText(methodBody, documentationTestMethod))
+            WriteCommandAction.runWriteCommandAction(selectedMethod.project) {documentationTest?.add(documentationTestMethod)}
+
         }
     }
 
