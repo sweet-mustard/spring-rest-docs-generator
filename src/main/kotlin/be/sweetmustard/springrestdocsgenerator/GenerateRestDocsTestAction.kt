@@ -4,7 +4,6 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.patterns.PsiJavaPatterns.psiClass
 import com.intellij.psi.*
 import com.intellij.psi.util.PsiTypesUtil
 import com.intellij.psi.util.PsiUtil
@@ -19,15 +18,17 @@ class GenerateRestDocsTestAction : AnAction() {
         val selectedMethod: PsiElement? = event.getData(CommonDataKeys.PSI_ELEMENT)
 
         if (selectedMethod is PsiMethod) {
-            
+
             val requestMappingOfMethod = getRequestMappingOfMethod(selectedMethod)
 
             val requestMappingOfClass =
                 getRequestMappingOfParentalRestController(selectedMethod)
-            
+
             val requestUri =
-                getUriFromAnnotation(requestMappingOfClass) + getUriFromAnnotation(requestMappingOfMethod)
-            
+                getUriFromAnnotation(requestMappingOfClass) + getUriFromAnnotation(
+                    requestMappingOfMethod
+                )
+
             val requestMappingType =
                 requestMappingOfMethod.resolveAnnotationType()?.name?.removeSuffix("Mapping")
 
@@ -61,7 +62,7 @@ class GenerateRestDocsTestAction : AnAction() {
                 it.qualifiedName?.equals("org.springframework.web.bind.annotation.ResponseStatus")
                     ?: false
             }.toList()
-            
+
             val httpStatus: String? = if (responseStatus.isEmpty()) {
                 "OK"
             } else {
@@ -71,7 +72,7 @@ class GenerateRestDocsTestAction : AnAction() {
             val methodBodyBuilder = StringBuilder()
 
             val responseObject = PsiTypesUtil.getPsiClass(selectedMethod.returnType)
-            
+
             methodBodyBuilder.append("mockMvc.perform(${requestMappingType?.toLowerCasePreservingASCIIRules()}(\"$requestUri\"")
             if (pathParameters.isNotEmpty()) {
                 methodBodyBuilder.append(", ".repeat(pathParameters.size))
@@ -85,7 +86,7 @@ class GenerateRestDocsTestAction : AnAction() {
             }
             if (requestObjectClass != null) {
                 val requestObjectFields = requestObjectClass.fields
-                methodBodyBuilder.appendLine("request.contentType(MediaType.APPLICATION_JSON)")
+                methodBodyBuilder.appendLine(".contentType(MediaType.APPLICATION_JSON)")
                 methodBodyBuilder.appendLine(".content(\"\"\"\n{")
                 methodBodyBuilder.appendLine(requestObjectFields.stream()
                     .map { field -> "\"${field.name}\":" }
@@ -98,19 +99,18 @@ class GenerateRestDocsTestAction : AnAction() {
                 ?.toLowerCasePreservingASCIIRules()
                 ?.replaceFirstChar { c -> c.uppercaseChar() } + "())")
             methodBodyBuilder.appendLine(".andDo(document(\"${selectedMethod.name.camelToKebabCase()}\",")
-            if (pathParameters.isNotEmpty()) {
-                methodBodyBuilder.append(generatePathParametersDocumentation(pathParameters))
-            }
-            if (queryParameters.isNotEmpty()) {
-                methodBodyBuilder.append(generateQueryParametersDocumentation(queryParameters))
-            }
-            if (requestObjectClass != null) {
-                methodBodyBuilder.append(generateRequestObjectDocumentation(requestObjectClass))
-            }
-            if (responseObject != null) {
-                methodBodyBuilder.append(generateResponseObjectDocumentation(responseObject))
-            }
-            methodBodyBuilder.append(");")
+            val documentationFields = listOf(
+                generatePathParametersDocumentation(pathParameters),
+                generateQueryParametersDocumentation(queryParameters),
+                generateRequestObjectDocumentation(requestObjectClass),
+                generateResponseObjectDocumentation(responseObject)
+            ).stream()
+                .filter(String::isNotEmpty)
+                .reduce { a, b -> "$a,\n$b" }
+                .orElse("")
+            
+            methodBodyBuilder.append(documentationFields)
+            methodBodyBuilder.append(")\n);")
             val methodBody = methodBodyBuilder.toString()
 
             val restController = selectedMethod.parentOfType<PsiClass>()!!
@@ -121,7 +121,7 @@ class GenerateRestDocsTestAction : AnAction() {
                 testSourceRoot,
                 restController
             )?.childrenOfType<PsiClass>()?.get(0)
-            
+
             val elementFactory = JavaPsiFacade.getInstance(selectedMethod.project).elementFactory
 
             val documentationTestMethod =
@@ -129,29 +129,60 @@ class GenerateRestDocsTestAction : AnAction() {
             PsiUtil.addException(documentationTestMethod, "Exception")
             documentationTestMethod.modifierList.addAnnotation("Test")
             PsiUtil.setModifierProperty(documentationTestMethod, PsiModifier.PACKAGE_LOCAL, true)
-            documentationTestMethod.body!!.add(elementFactory.createStatementFromText(methodBody, documentationTestMethod))
-            WriteCommandAction.runWriteCommandAction(selectedMethod.project) {documentationTest?.add(documentationTestMethod)}
+            documentationTestMethod.body!!.add(
+                elementFactory.createStatementFromText(
+                    methodBody,
+                    documentationTestMethod
+                )
+            )
+            WriteCommandAction.runWriteCommandAction(selectedMethod.project) {
+                documentationTest?.add(
+                    documentationTestMethod
+                )
+            }
 
         }
     }
 
-    private fun generateQueryParametersDocumentation(queryParameters: List<PsiParameter>) =
-        "queryParameters(\n" + generateDocumentationForParameters(queryParameters) + "\n)\n"
+    private fun generateQueryParametersDocumentation(queryParameters: List<PsiParameter>): String {
+        if (queryParameters.isNotEmpty()) {
+            return "queryParameters(\n" + generateDocumentationForParameters(queryParameters) + "\n)"
+        }
+        return ""
+    }
 
-    private fun generatePathParametersDocumentation(pathParameters: List<PsiParameter>) =
-        "pathParameters(\n" + generateDocumentationForParameters(pathParameters) + "\n)\n"
+    private fun generatePathParametersDocumentation(pathParameters: List<PsiParameter>): String {
+        if (pathParameters.isNotEmpty()) {
+            return "pathParameters(\n" + generateDocumentationForParameters(pathParameters) + "\n)"
+        }
+        return ""
+    }
 
-    private fun generateDocumentationForParameters(pathParameters: List<PsiParameter>): String? =
-        pathParameters.stream()
+    private fun generateDocumentationForParameters(parameters: List<PsiParameter>): String? =
+        parameters.stream()
             .map { param -> "parameterWithName(\"${param.name}\").description(\"\")" }
-            .reduce { a, b -> "$a\n$b" }
+            .reduce { a, b -> "$a,\n$b" }
             .orElse("")
 
-    private fun generateRequestObjectDocumentation(requestObjectClass: PsiClass) =
-        "requestFields(\n" + generateDocumentationForFields(requestObjectClass.fields) + "\n)\n"
+    private fun generateRequestObjectDocumentation(requestObjectClass: PsiClass?): String {
+        if (requestObjectClass != null) {
+            return "requestFields(\n" + generateDocumentationForFields(requestObjectClass.fields) + "\n)"
+        }
+        return ""
+    }
 
-    private fun generateResponseObjectDocumentation(requestObjectClass: PsiClass) =
-        "responseFields(\n" + generateDocumentationForFields(requestObjectClass.fields) + "\n)\n"
+    private fun generateResponseObjectDocumentation(responseObjectClass: PsiClass?): String {
+        if (responseObjectClass != null) {
+            return "responseFields(\n" + generateDocumentationForFields(responseObjectClass.fields) + "\n)"
+        }
+        return ""
+    }
+
+    private fun generateDocumentationForFields(responseObjectFields: Array<PsiField>): String? =
+        responseObjectFields.stream()
+            .map { param -> "fieldWithPath(\"${param.name}\").description(\"\")" }
+            .reduce { a, b -> "$a,\n$b" }
+            .orElse("")
 
     private fun getRequestMappingOfParentalRestController(selectedMethod: PsiMethod): PsiAnnotation? {
         val requestMappingClassLevel =
@@ -187,12 +218,6 @@ class GenerateRestDocsTestAction : AnAction() {
         return uri.literalValue
     }
 
-    private fun generateDocumentationForFields(responseObjectFields: Array<PsiField>): String? =
-        responseObjectFields.stream()
-            .map { param -> "fieldWithPath(\"${param.name}\").description(\"\")" }
-            .reduce { a, b -> "$a\n$b" }
-            .orElse("")
-    
     private fun String.camelToKebabCase(): String {
         val pattern = "(?<=.)[A-Z]".toRegex()
         return this.replace(pattern, "-$0").lowercase()
