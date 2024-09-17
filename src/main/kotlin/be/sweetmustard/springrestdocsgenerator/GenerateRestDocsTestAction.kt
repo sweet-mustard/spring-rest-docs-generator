@@ -205,13 +205,14 @@ class GenerateRestDocsTestAction : AnAction() {
                 )
             )
             WriteCommandAction.runWriteCommandAction(currentProject) {
-                documentationTestClass.add(
+                val addedDocumentationTestMethod = documentationTestClass.add(
                     documentationTestMethod
-                )
+                ) as PsiMethod
+                addedDocumentationTestMethod.navigate(true)
             }
+        } else {
+            documentationTestMethod.navigate(true)
         }
-        documentationTestMethod.navigate(true)
-
     }
 
     private fun addMockMvcFieldIfMissing(
