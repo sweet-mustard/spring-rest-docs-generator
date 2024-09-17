@@ -19,128 +19,137 @@ class GenerateRestDocsTestAction : AnAction() {
 
         if (selectedMethod is PsiMethod) {
 
-            val requestMappingOfMethod = getRequestMappingOfMethod(selectedMethod)
+            val methodBody = generateMethodBody(selectedMethod)
 
-            val requestMappingOfClass =
-                getRequestMappingOfParentalRestController(selectedMethod)
+            generateRestDocsTest(selectedMethod, methodBody)
 
-            val requestUri =
-                getUriFromAnnotation(requestMappingOfClass) + getUriFromAnnotation(
-                    requestMappingOfMethod
-                )
+        }
+    }
 
-            val requestMappingType =
-                requestMappingOfMethod.resolveAnnotationType()?.name?.removeSuffix("Mapping")
+    private fun generateMethodBody(selectedMethod: PsiMethod): String {
+        val requestMappingOfMethod = getRequestMappingOfMethod(selectedMethod)
 
-            val pathParameters = selectedMethod.parameterList.parameters.filter {
-                it.annotations.stream()
-                    .anyMatch { psiAnn ->
-                        psiAnn.qualifiedName?.contains("org.springframework.web.bind.annotation.PathVariable")
-                            ?: false
-                    }
-            }
+        val requestMappingOfClass =
+            getRequestMappingOfParentalRestController(selectedMethod)
 
-            val queryParameters = selectedMethod.parameterList.parameters.filter {
-                it.annotations.stream()
-                    .anyMatch { psiAnn ->
-                        psiAnn.qualifiedName?.contains("org.springframework.web.bind.annotation.RequestParam")
-                            ?: false
-                    }
-            }
-
-            val requestObject = selectedMethod.parameterList.parameters.filter {
-                it.annotations.stream()
-                    .anyMatch { psiAnn ->
-                        psiAnn.qualifiedName?.contains("org.springframework.web.bind.annotation.RequestBody")
-                            ?: false
-                    }
-            }.firstOrNull()
-
-            val requestObjectClass = PsiTypesUtil.getPsiClass(requestObject?.type)
-
-            val responseStatus = selectedMethod.modifierList.annotations.filter {
-                it.qualifiedName?.equals("org.springframework.web.bind.annotation.ResponseStatus")
-                    ?: false
-            }.toList()
-
-            val httpStatus: String? = if (responseStatus.isEmpty()) {
-                "OK"
-            } else {
-                responseStatus.first().parameterList.attributes[0].value?.text
-            }
-
-            val methodBodyBuilder = StringBuilder()
-
-            val responseObject = PsiTypesUtil.getPsiClass(selectedMethod.returnType)
-
-            methodBodyBuilder.append("mockMvc.perform(${requestMappingType?.toLowerCasePreservingASCIIRules()}(\"$requestUri\"")
-            if (pathParameters.isNotEmpty()) {
-                methodBodyBuilder.append(", ".repeat(pathParameters.size))
-            }
-            methodBodyBuilder.appendLine(")")
-            if (queryParameters.isNotEmpty()) {
-                methodBodyBuilder.appendLine(queryParameters.stream()
-                    .map { param -> ".param(\"${param.name}\", )" }
-                    .reduce { a, b -> "$a\n$b" }
-                    .orElse(""))
-            }
-            if (requestObjectClass != null) {
-                val requestObjectFields = requestObjectClass.fields
-                methodBodyBuilder.appendLine(".contentType(MediaType.APPLICATION_JSON)")
-                methodBodyBuilder.appendLine(".content(\"\"\"\n{")
-                methodBodyBuilder.appendLine(requestObjectFields.stream()
-                    .map { field -> "\"${field.name}\":" }
-                    .reduce { a: String, b: String -> "$a,\n$b" }
-                    .orElse(""))
-                methodBodyBuilder.appendLine("}\n\"\"\")")
-            }
-            methodBodyBuilder.appendLine(")")
-            methodBodyBuilder.appendLine(".andExpect(status().is" + httpStatus?.removePrefix("HttpStatus.")
-                ?.toLowerCasePreservingASCIIRules()
-                ?.replaceFirstChar { c -> c.uppercaseChar() } + "())")
-            methodBodyBuilder.appendLine(".andDo(document(\"${selectedMethod.name.camelToKebabCase()}\",")
-            val documentationFields = listOf(
-                generatePathParametersDocumentation(pathParameters),
-                generateQueryParametersDocumentation(queryParameters),
-                generateRequestObjectDocumentation(requestObjectClass),
-                generateResponseObjectDocumentation(responseObject)
-            ).stream()
-                .filter(String::isNotEmpty)
-                .reduce { a, b -> "$a,\n$b" }
-                .orElse("")
-            
-            methodBodyBuilder.append(documentationFields)
-            methodBodyBuilder.append(")\n);")
-            val methodBody = methodBodyBuilder.toString()
-
-            val restController = selectedMethod.parentOfType<PsiClass>()!!
-
-            val possibleTestSourceRoots = RestDocsHelper.getPossibleTestSourceRoots(restController)
-            val testSourceRoot = possibleTestSourceRoots[0]
-            val documentationTest = RestDocsHelper.getCorrespondingDocumentationTest(
-                testSourceRoot,
-                restController
-            )?.childrenOfType<PsiClass>()?.get(0)
-
-            val elementFactory = JavaPsiFacade.getInstance(selectedMethod.project).elementFactory
-
-            val documentationTestMethod =
-                elementFactory.createMethod(selectedMethod.name + "Example", PsiTypes.voidType())
-            PsiUtil.addException(documentationTestMethod, "Exception")
-            documentationTestMethod.modifierList.addAnnotation("Test")
-            PsiUtil.setModifierProperty(documentationTestMethod, PsiModifier.PACKAGE_LOCAL, true)
-            documentationTestMethod.body!!.add(
-                elementFactory.createStatementFromText(
-                    methodBody,
-                    documentationTestMethod
-                )
+        val requestUri =
+            getUriFromAnnotation(requestMappingOfClass) + getUriFromAnnotation(
+                requestMappingOfMethod
             )
-            WriteCommandAction.runWriteCommandAction(selectedMethod.project) {
-                documentationTest?.add(
-                    documentationTestMethod
-                )
-            }
 
+        val requestMappingType =
+            requestMappingOfMethod.resolveAnnotationType()?.name?.removeSuffix("Mapping")
+
+        val pathParameters = selectedMethod.parameterList.parameters.filter {
+            it.annotations.stream()
+                .anyMatch { psiAnn ->
+                    psiAnn.qualifiedName?.contains("org.springframework.web.bind.annotation.PathVariable")
+                        ?: false
+                }
+        }
+
+        val queryParameters = selectedMethod.parameterList.parameters.filter {
+            it.annotations.stream()
+                .anyMatch { psiAnn ->
+                    psiAnn.qualifiedName?.contains("org.springframework.web.bind.annotation.RequestParam")
+                        ?: false
+                }
+        }
+
+        val requestObject = selectedMethod.parameterList.parameters.filter {
+            it.annotations.stream()
+                .anyMatch { psiAnn ->
+                    psiAnn.qualifiedName?.contains("org.springframework.web.bind.annotation.RequestBody")
+                        ?: false
+                }
+        }.firstOrNull()
+
+        val requestObjectClass = PsiTypesUtil.getPsiClass(requestObject?.type)
+
+        val responseStatus = selectedMethod.modifierList.annotations.filter {
+            it.qualifiedName?.equals("org.springframework.web.bind.annotation.ResponseStatus")
+                ?: false
+        }.toList()
+
+        val httpStatus: String? = if (responseStatus.isEmpty()) {
+            "OK"
+        } else {
+            responseStatus.first().parameterList.attributes[0].value?.text
+        }
+
+        val methodBodyBuilder = StringBuilder()
+
+        val responseObject = PsiTypesUtil.getPsiClass(selectedMethod.returnType)
+
+        methodBodyBuilder.append("mockMvc.perform(${requestMappingType?.toLowerCasePreservingASCIIRules()}(\"$requestUri\"")
+        if (pathParameters.isNotEmpty()) {
+            methodBodyBuilder.append(", ".repeat(pathParameters.size))
+        }
+        methodBodyBuilder.appendLine(")")
+        if (queryParameters.isNotEmpty()) {
+            methodBodyBuilder.appendLine(queryParameters.stream()
+                .map { param -> ".param(\"${param.name}\", )" }
+                .reduce { a, b -> "$a\n$b" }
+                .orElse(""))
+        }
+        if (requestObjectClass != null) {
+            val requestObjectFields = requestObjectClass.fields
+            methodBodyBuilder.appendLine(".contentType(MediaType.APPLICATION_JSON)")
+            methodBodyBuilder.appendLine(".content(\"\"\"\n{")
+            methodBodyBuilder.appendLine(requestObjectFields.stream()
+                .map { field -> "\"${field.name}\":" }
+                .reduce { a: String, b: String -> "$a,\n$b" }
+                .orElse(""))
+            methodBodyBuilder.appendLine("}\n\"\"\")")
+        }
+        methodBodyBuilder.appendLine(")")
+        methodBodyBuilder.appendLine(".andExpect(status().is" + httpStatus?.removePrefix("HttpStatus.")
+            ?.toLowerCasePreservingASCIIRules()
+            ?.replaceFirstChar { c -> c.uppercaseChar() } + "())")
+        methodBodyBuilder.appendLine(".andDo(document(\"${selectedMethod.name.camelToKebabCase()}\",")
+        val documentationFields = listOf(
+            generatePathParametersDocumentation(pathParameters),
+            generateQueryParametersDocumentation(queryParameters),
+            generateRequestObjectDocumentation(requestObjectClass),
+            generateResponseObjectDocumentation(responseObject)
+        ).stream()
+            .filter(String::isNotEmpty)
+            .reduce { a, b -> "$a,\n$b" }
+            .orElse("")
+
+        methodBodyBuilder.append(documentationFields)
+        methodBodyBuilder.append(")\n);")
+        val methodBody = methodBodyBuilder.toString()
+        return methodBody
+    }
+
+    private fun generateRestDocsTest(selectedMethod: PsiMethod, methodBody: String) {
+        val restController = selectedMethod.parentOfType<PsiClass>()!!
+
+        val possibleTestSourceRoots = RestDocsHelper.getPossibleTestSourceRoots(restController)
+        val testSourceRoot = possibleTestSourceRoots[0]
+        val documentationTest = RestDocsHelper.getCorrespondingDocumentationTest(
+            testSourceRoot,
+            restController
+        )?.childrenOfType<PsiClass>()?.get(0)
+
+        val elementFactory = JavaPsiFacade.getInstance(selectedMethod.project).elementFactory
+
+        val documentationTestMethod =
+            elementFactory.createMethod(selectedMethod.name + "Example", PsiTypes.voidType())
+        PsiUtil.addException(documentationTestMethod, "Exception")
+        documentationTestMethod.modifierList.addAnnotation("Test")
+        PsiUtil.setModifierProperty(documentationTestMethod, PsiModifier.PACKAGE_LOCAL, true)
+        documentationTestMethod.body!!.add(
+            elementFactory.createStatementFromText(
+                methodBody,
+                documentationTestMethod
+            )
+        )
+        WriteCommandAction.runWriteCommandAction(selectedMethod.project) {
+            documentationTest?.add(
+                documentationTestMethod
+            )
         }
     }
 
