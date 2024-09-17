@@ -5,6 +5,7 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.project.Project
 import com.intellij.psi.*
 import com.intellij.psi.codeStyle.CodeStyleManager
 import com.intellij.psi.util.PsiTypesUtil
@@ -163,7 +164,6 @@ class GenerateRestDocsTestAction : AnAction() {
                     JavaFileType.INSTANCE,
                     builder.toString()
                 )
-            println(documentationTestFile)
 
             val restDocumentationTestClass = elementFactory.createClass(documentationTestName.removeSuffix(".java"))
             PsiUtil.setModifierProperty(restDocumentationTestClass, PsiModifier.PACKAGE_LOCAL, true)
@@ -183,6 +183,8 @@ class GenerateRestDocsTestAction : AnAction() {
         }
 
         val documentationTestClass = documentationTestFile.childrenOfType<PsiClass>()[0]
+
+        addMockMvcFieldIfMissing(elementFactory, documentationTestClass, currentProject)
 
         val documentationTestName = selectedMethod.name + "Example"
 
@@ -210,6 +212,25 @@ class GenerateRestDocsTestAction : AnAction() {
         }
         documentationTestMethod.navigate(true)
 
+    }
+
+    private fun addMockMvcFieldIfMissing(
+        elementFactory: PsiElementFactory,
+        documentationTestClass: PsiClass,
+        currentProject: Project
+    ) {
+        val mockMvcType =
+            elementFactory.createTypeByFQClassName("org.springframework.test.web.servlet.MockMvc")
+        if (documentationTestClass.fields.stream().noneMatch { it.type == mockMvcType }) {
+            val mockMvcField = elementFactory.createField("mockMvc", mockMvcType)
+            PsiUtil.setModifierProperty(mockMvcField, PsiModifier.PRIVATE, true)
+            mockMvcField.modifierList?.addAnnotation("Autowired")
+            WriteCommandAction.runWriteCommandAction(currentProject) {
+                documentationTestClass.add(
+                    mockMvcField
+                )
+            }
+        }
     }
 
     private fun addImportsToDocumentationTest(builder: StringBuilder) {
