@@ -1,10 +1,12 @@
 package be.sweetmustard.springrestdocsgenerator
 
+import com.intellij.ide.highlighter.JavaFileType
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.psi.*
+import com.intellij.psi.codeStyle.CodeStyleManager
 import com.intellij.psi.util.PsiTypesUtil
 import com.intellij.psi.util.PsiUtil
 import com.intellij.psi.util.childrenOfType
@@ -125,20 +127,66 @@ class GenerateRestDocsTestAction : AnAction() {
     }
 
     private fun generateRestDocsTest(selectedMethod: PsiMethod, methodBody: String) {
+        val currentProject = selectedMethod.project
+        val elementFactory = JavaPsiFacade.getInstance(currentProject).elementFactory
+
         val restController = selectedMethod.parentOfType<PsiClass>()!!
 
         val possibleTestSourceRoots = RestDocsHelper.getPossibleTestSourceRoots(restController)
         val testSourceRoot = possibleTestSourceRoots[0]
-        val documentationTest = RestDocsHelper.getCorrespondingDocumentationTest(
+        var documentationTestFile = RestDocsHelper.getCorrespondingDocumentationTestFile(
             testSourceRoot,
             restController
-        )?.childrenOfType<PsiClass>()?.get(0)
+        )
 
-        val elementFactory = JavaPsiFacade.getInstance(selectedMethod.project).elementFactory
+        if (documentationTestFile == null) {
+            val packageName = RestDocsHelper.getPackageName(restController)
+            val testSourceRootDirectory =
+                PsiManager.getInstance(currentProject).findDirectory(testSourceRoot)!!
+
+            val directory =
+                createPackageDirectoriesIfNeeded(testSourceRootDirectory, restController)
+            
+            val builder = StringBuilder()
+            if (packageName.isNotEmpty()) {
+                builder.appendLine("package $packageName;")
+                builder.appendLine()
+            }
+            addImportsToDocumentationTest(builder)
+
+            val documentationTestName =
+                RestDocsHelper.getDocumentationTestFileName(restController)
+            
+            documentationTestFile = PsiFileFactory.getInstance(currentProject)
+                .createFileFromText(
+                    documentationTestName,
+                    JavaFileType.INSTANCE,
+                    builder.toString()
+                )
+            println(documentationTestFile)
+
+            val restDocumentationTestClass = elementFactory.createClass(documentationTestName.removeSuffix(".java"))
+            PsiUtil.setModifierProperty(restDocumentationTestClass, PsiModifier.PACKAGE_LOCAL, true)
+            restDocumentationTestClass.modifierList?.addAnnotation("WebMvcTest(${restController.name}.class)")
+            restDocumentationTestClass.modifierList?.addAnnotation("AutoConfigureRestDocs")
+            restDocumentationTestClass.modifierList?.addAnnotation("ExtendWith({RestDocumentationExtension.class})")
+
+            documentationTestFile.add(restDocumentationTestClass)
+            val codeStyleManager = CodeStyleManager.getInstance(currentProject)
+            codeStyleManager.reformat(documentationTestFile)
+            
+
+            WriteCommandAction.runWriteCommandAction(currentProject) {
+                directory.add(documentationTestFile)
+            }
+            
+        }
+
+        val documentationTestClass = documentationTestFile.childrenOfType<PsiClass>()[0]
 
         val documentationTestName = selectedMethod.name + "Example"
 
-        var documentationTestMethod = documentationTest?.methods.stream()
+        var documentationTestMethod = documentationTestClass.methods.stream()
             .filter { it.name == documentationTestName }
             .getIfSingle()
 
@@ -154,14 +202,33 @@ class GenerateRestDocsTestAction : AnAction() {
                     documentationTestMethod
                 )
             )
-            WriteCommandAction.runWriteCommandAction(selectedMethod.project) {
-                documentationTest?.add(
+            WriteCommandAction.runWriteCommandAction(currentProject) {
+                documentationTestClass.add(
                     documentationTestMethod
                 )
             }
         }
         documentationTestMethod.navigate(true)
-        
+
+    }
+
+    private fun addImportsToDocumentationTest(builder: StringBuilder) {
+        builder.appendLine()
+        builder.appendLine("import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;")
+        builder.appendLine("import static org.springframework.restdocs.payload.PayloadDocumentation.*;")
+        builder.appendLine("import static org.springframework.restdocs.request.RequestDocumentation.*;")
+        builder.appendLine("import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;")
+        builder.appendLine("import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;")
+        builder.appendLine()
+        builder.appendLine("import org.junit.jupiter.api.Test;")
+        builder.appendLine()
+        builder.appendLine("import org.junit.jupiter.api.extension.ExtendWith;")
+        builder.appendLine("import org.springframework.beans.factory.annotation.Autowired;")
+        builder.appendLine("import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs;")
+        builder.appendLine("import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;")
+        builder.appendLine("import org.springframework.http.MediaType;")
+        builder.appendLine("import org.springframework.restdocs.RestDocumentationExtension;")
+        builder.appendLine()
     }
 
     private fun generateQueryParametersDocumentation(queryParameters: List<PsiParameter>): String {
@@ -241,5 +308,22 @@ class GenerateRestDocsTestAction : AnAction() {
     private fun String.camelToKebabCase(): String {
         val pattern = "(?<=.)[A-Z]".toRegex()
         return this.replace(pattern, "-$0").lowercase()
+    }
+
+    private fun createPackageDirectoriesIfNeeded(
+        testSourceRootDirectory: PsiDirectory,
+        selectedClass: PsiClass
+    ): PsiDirectory {
+        val packageName = RestDocsHelper.getPackageName(selectedClass)
+        var directory = testSourceRootDirectory
+        val packageNameParts = packageName.split(".").toList()
+        for (packageNamePart in packageNameParts) {
+            var subdirectory = directory.findSubdirectory(packageNamePart)
+            if (subdirectory == null) {
+                subdirectory = directory.createSubdirectory(packageNamePart)
+            }
+            directory = subdirectory
+        }
+        return directory
     }
 }

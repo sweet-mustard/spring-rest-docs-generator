@@ -12,7 +12,7 @@ import java.util.*
 
 class RestDocsHelper {
     companion object {
-        fun getCorrespondingDocumentationTest(
+        fun getCorrespondingDocumentationTestFile(
             testSourceRoot: VirtualFile,
             productionClass: PsiClass
         ): PsiFile? {
@@ -33,7 +33,7 @@ class RestDocsHelper {
             return documentationTestFile
         }
 
-        private fun getDocumentationTestFileName(productionClass: PsiClass): String {
+        fun getDocumentationTestFileName(productionClass: PsiClass): String {
             return productionClass.name + "DocumentationTest.java"
         }
         
