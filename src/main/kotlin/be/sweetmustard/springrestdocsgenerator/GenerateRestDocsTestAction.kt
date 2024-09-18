@@ -15,6 +15,7 @@ import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.*
 import com.intellij.psi.codeStyle.CodeStyleManager
+import com.intellij.psi.impl.source.PsiClassReferenceType
 import com.intellij.psi.util.PsiTypesUtil
 import com.intellij.psi.util.PsiUtil
 import com.intellij.psi.util.childrenOfType
@@ -40,7 +41,7 @@ class GenerateRestDocsTestAction : AnAction() {
                 .showErrorHint(editor, "Cannot generate documentation test for selected element.")
             return
         }
-        
+
         val selectedMethod = if (selectedElement is PsiMethod) {
             selectedElement
         } else {
@@ -53,7 +54,7 @@ class GenerateRestDocsTestAction : AnAction() {
                 .showErrorHint(editor, "Cannot generate documentation test for selected element.")
             return
         }
-        
+
         showCreateOrJumpDialog(currentProject, selectedMethod, event)
     }
 
@@ -71,7 +72,7 @@ class GenerateRestDocsTestAction : AnAction() {
         } else {
             listOf(SelectionItem(CREATE, "Create new Documentation Test ...", null))
         }
-        
+
         JBPopupFactory.getInstance().createPopupChooserBuilder(items)
             .setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
             .setTitle("Choose Documentation Test for " + selectedMethod.name)
@@ -95,7 +96,13 @@ class GenerateRestDocsTestAction : AnAction() {
                             currentProject,
                             it.title,
                             "",
-                            { generateRestDocumentationTest(selectedMethod, currentProject, testSourceRoot) }
+                            {
+                                generateRestDocumentationTest(
+                                    selectedMethod,
+                                    currentProject,
+                                    testSourceRoot
+                                )
+                            }
                         )
                     }
                 }
@@ -161,13 +168,17 @@ class GenerateRestDocsTestAction : AnAction() {
             testSourceRoot,
             elementFactory
         )
-        
+
         val documentationTestClass = documentationTestFile.childrenOfType<PsiClass>()[0]
 
         addMockMvcFieldIfMissing(elementFactory, documentationTestClass)
 
         val documentationTestMethod =
-            getOrCreateDocumentationTestMethod(selectedMethod, documentationTestClass, elementFactory)
+            getOrCreateDocumentationTestMethod(
+                selectedMethod,
+                documentationTestClass,
+                elementFactory
+            )
 
         documentationTestMethod.navigate(true)
     }
@@ -186,11 +197,11 @@ class GenerateRestDocsTestAction : AnAction() {
         if (documentationTestMethod == null) {
             documentationTestMethod =
                 elementFactory.createMethod(documentationTestName, PsiTypes.voidType())
-            
+
             PsiUtil.addException(documentationTestMethod, "Exception")
             documentationTestMethod.modifierList.addAnnotation("Test")
             PsiUtil.setModifierProperty(documentationTestMethod, PsiModifier.PACKAGE_LOCAL, true)
-            
+
             documentationTestMethod.body!!.add(
                 elementFactory.createStatementFromText(
                     generateMethodBody(selectedMethod),
@@ -216,7 +227,7 @@ class GenerateRestDocsTestAction : AnAction() {
         if (documentationTestFile == null) {
 
             val fileContentBuilder = StringBuilder()
-            
+
             fileContentBuilder.append(packageStatement(restController))
             fileContentBuilder.append(importsForDocumentationTest())
 
@@ -231,7 +242,11 @@ class GenerateRestDocsTestAction : AnAction() {
                 )
 
             val restDocumentationTestClass =
-                generateRestDocumentationTestClass(elementFactory, documentationTestFileName, restController)
+                generateRestDocumentationTestClass(
+                    elementFactory,
+                    documentationTestFileName,
+                    restController
+                )
 
             documentationTestFile.add(restDocumentationTestClass)
 
@@ -244,13 +259,13 @@ class GenerateRestDocsTestAction : AnAction() {
                 createPackageDirectoriesIfNeeded(testSourceRootDirectory, restController)
             documentationTestFile = directory.add(documentationTestFile) as PsiFile
         }
-        
+
         return documentationTestFile
     }
 
     private fun packageStatement(
         restController: PsiClass,
-    ) : String {
+    ): String {
         val packageName = RestDocsHelper.getPackageName(restController)
 
         val builder = StringBuilder()
@@ -268,18 +283,18 @@ class GenerateRestDocsTestAction : AnAction() {
     ): PsiClass {
         val restDocumentationTestClass =
             elementFactory.createClass(classFileName.removeSuffix(".java"))
-        
+
         PsiUtil.setModifierProperty(restDocumentationTestClass, PsiModifier.PACKAGE_LOCAL, true)
         restDocumentationTestClass.modifierList?.addAnnotation("WebMvcTest(${restController.name}.class)")
         restDocumentationTestClass.modifierList?.addAnnotation("AutoConfigureRestDocs")
         restDocumentationTestClass.modifierList?.addAnnotation("ExtendWith({RestDocumentationExtension.class})")
-        
+
         return restDocumentationTestClass
     }
 
-    private fun importsForDocumentationTest() : String {
+    private fun importsForDocumentationTest(): String {
         val builder = StringBuilder()
-        
+
         builder.appendLine()
         builder.appendLine("import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;")
         builder.appendLine("import static org.springframework.restdocs.payload.PayloadDocumentation.*;")
@@ -296,7 +311,7 @@ class GenerateRestDocsTestAction : AnAction() {
         builder.appendLine("import org.springframework.http.MediaType;")
         builder.appendLine("import org.springframework.restdocs.RestDocumentationExtension;")
         builder.appendLine()
-        
+
         return builder.toString()
     }
 
@@ -307,7 +322,7 @@ class GenerateRestDocsTestAction : AnAction() {
         val codeStyleManager = CodeStyleManager.getInstance(currentProject)
         codeStyleManager.reformat(documentationTestFile)
     }
-    
+
     private fun addMockMvcFieldIfMissing(
         elementFactory: PsiElementFactory,
         documentationTestClass: PsiClass
@@ -335,6 +350,7 @@ class GenerateRestDocsTestAction : AnAction() {
 
         val requestMappingType =
             requestMappingOfMethod.resolveAnnotationType()?.name?.removeSuffix("Mapping")
+        requestMappingOfMethod.resolveAnnotationType()?.name?.removeSuffix("Mapping")
 
         val pathParameters = selectedMethod.parameterList.parameters.filter {
             it.annotations.stream()
@@ -375,19 +391,19 @@ class GenerateRestDocsTestAction : AnAction() {
 
         val methodBodyBuilder = StringBuilder()
 
-        val responseObject = PsiTypesUtil.getPsiClass(selectedMethod.returnType)
+        val responseObjectType = selectedMethod.returnTypeElement?.type
 
-        
+
         methodBodyBuilder.append("mockMvc.perform")
         methodBodyBuilder.openParenthesis()
-        
+
         methodBodyBuilder.append("${requestMappingType?.toLowerCasePreservingASCIIRules()}")
         methodBodyBuilder.openParenthesis()
-        
+
         methodBodyBuilder.append("\"$requestUri\"")
         methodBodyBuilder.append(", ".repeat(pathParameters.size))
         methodBodyBuilder.closeParenthesis()
-        
+
         if (queryParameters.isNotEmpty()) {
             methodBodyBuilder.appendLine()
             methodBodyBuilder.appendLine(queryParameters.stream()
@@ -399,28 +415,28 @@ class GenerateRestDocsTestAction : AnAction() {
             val requestObjectFields = requestObjectClass.fields
             methodBodyBuilder.appendLine(".contentType(MediaType.APPLICATION_JSON)")
             methodBodyBuilder.append(".content")
-            
+
             methodBodyBuilder.openParenthesis()
             methodBodyBuilder.append(generateJsonRequestObject(requestObjectFields))
             methodBodyBuilder.closeParenthesis()
         }
         methodBodyBuilder.closeParenthesis()
         methodBodyBuilder.appendLine()
-        
+
         methodBodyBuilder.appendLine(".andExpect(status().is" + getExpectedStatus(httpStatus) + "())")
-        
+
         methodBodyBuilder.append(".andDo")
         methodBodyBuilder.openParenthesis()
-        
+
         methodBodyBuilder.append("document")
         methodBodyBuilder.openParenthesis()
-        
+
         methodBodyBuilder.appendLine("\"${selectedMethod.name.camelToKebabCase()}\",")
         val documentationFields = listOf(
             generatePathParametersDocumentation(pathParameters),
             generateQueryParametersDocumentation(queryParameters),
             generateRequestObjectDocumentation(requestObjectClass),
-            generateResponseObjectDocumentation(responseObject)
+            generateResponseObjectDocumentation(responseObjectType)
         ).stream()
             .filter(String::isNotEmpty)
             .reduce { a, b -> "$a,\n$b" }
@@ -431,13 +447,13 @@ class GenerateRestDocsTestAction : AnAction() {
         methodBodyBuilder.closeParenthesis()
         methodBodyBuilder.append(";")
         val methodBody = methodBodyBuilder.toString()
-        
+
         return methodBody
     }
 
     private fun generateJsonRequestObject(
         requestObjectFields: Array<PsiField>
-    ) : String {
+    ): String {
 
         val jsonRequestObjectBuilder = StringBuilder()
         jsonRequestObjectBuilder.appendLine("\"\"\"\n{")
@@ -446,7 +462,7 @@ class GenerateRestDocsTestAction : AnAction() {
             .reduce { a: String, b: String -> "$a,\n$b" }
             .orElse(""))
         jsonRequestObjectBuilder.append("}\n\"\"\"")
-        
+
         return jsonRequestObjectBuilder.toString()
     }
 
@@ -481,11 +497,28 @@ class GenerateRestDocsTestAction : AnAction() {
         return ""
     }
 
-    private fun generateResponseObjectDocumentation(responseObjectClass: PsiClass?): String {
-        if (responseObjectClass != null) {
-            return "responseFields(\n" + generateDocumentationForFields(responseObjectClass.fields) + "\n)"
+    private fun generateResponseObjectDocumentation(responseObjectType: PsiType?): String {
+        val responseBuilder = StringBuilder()
+        if (responseObjectType != null) {
+            responseBuilder.append("responseFields")
+            responseBuilder.openParenthesis()
+            responseBuilder.appendLine()
+
+            if (responseObjectType.toString().contains("List")) {
+                responseBuilder.appendLine("fieldWithPath(\"[]\").description(\"\"))")
+                responseBuilder.appendLine(".andWithPrefix(\"[].\",")
+                val typeParameters = (responseObjectType as PsiClassReferenceType).parameters
+                responseBuilder.appendLine(
+                    generateDocumentationForFields(PsiTypesUtil.getPsiClass(typeParameters[0])!!.fields)
+                )
+            } else {
+                responseBuilder.appendLine(
+                    generateDocumentationForFields(PsiTypesUtil.getPsiClass(responseObjectType)!!.fields)
+                )
+            }
+            responseBuilder.closeParenthesis()
         }
-        return ""
+        return responseBuilder.toString()
     }
 
     private fun generateDocumentationForFields(responseObjectFields: Array<PsiField>): String? =
@@ -532,7 +565,7 @@ class GenerateRestDocsTestAction : AnAction() {
         val pattern = "(?<=.)[A-Z]".toRegex()
         return this.replace(pattern, "-$0").lowercase()
     }
-    
+
     private fun StringBuilder.openParenthesis() {
         this.append("(")
     }
