@@ -74,7 +74,7 @@ class GenerateRestDocsTestAction : AnAction() {
         
         JBPopupFactory.getInstance().createPopupChooserBuilder(items)
             .setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
-            .setTitle("Create Documentation Test for " + selectedMethod.name)
+            .setTitle("Choose Documentation Test for " + selectedMethod.name)
             .setRenderer(object : ColoredListCellRenderer<SelectionItem>() {
                 override fun customizeCellRenderer(
                     list: JList<out SelectionItem>,
