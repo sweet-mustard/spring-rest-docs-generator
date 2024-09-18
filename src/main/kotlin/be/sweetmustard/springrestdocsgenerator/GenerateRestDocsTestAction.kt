@@ -155,51 +155,13 @@ class GenerateRestDocsTestAction : AnAction() {
 
         val restController = selectedMethod.parentOfType<PsiClass>()!!
 
-        RestDocsHelper.getPossibleTestSourceRoots(restController)
-        var documentationTestFile = RestDocsHelper.getCorrespondingDocumentationTestFile(
+        val documentationTestFile = createOrGetDocumentationTestFile(
+            restController,
+            currentProject,
             testSourceRoot,
-            restController
+            elementFactory
         )
-
-        if (documentationTestFile == null) {
-            val packageName = RestDocsHelper.getPackageName(restController)
-            val testSourceRootDirectory =
-                PsiManager.getInstance(currentProject).findDirectory(testSourceRoot)!!
-
-            val directory =
-                createPackageDirectoriesIfNeeded(testSourceRootDirectory, restController)
-
-            val builder = StringBuilder()
-            if (packageName.isNotEmpty()) {
-                builder.appendLine("package $packageName;")
-                builder.appendLine()
-            }
-            addImportsToDocumentationTest(builder)
-
-            val documentationTestName =
-                RestDocsHelper.getDocumentationTestFileName(restController)
-
-            documentationTestFile = PsiFileFactory.getInstance(currentProject)
-                .createFileFromText(
-                    documentationTestName,
-                    JavaFileType.INSTANCE,
-                    builder.toString()
-                )
-
-            val restDocumentationTestClass =
-                elementFactory.createClass(documentationTestName.removeSuffix(".java"))
-            PsiUtil.setModifierProperty(restDocumentationTestClass, PsiModifier.PACKAGE_LOCAL, true)
-            restDocumentationTestClass.modifierList?.addAnnotation("WebMvcTest(${restController.name}.class)")
-            restDocumentationTestClass.modifierList?.addAnnotation("AutoConfigureRestDocs")
-            restDocumentationTestClass.modifierList?.addAnnotation("ExtendWith({RestDocumentationExtension.class})")
-
-            documentationTestFile.add(restDocumentationTestClass)
-            val codeStyleManager = CodeStyleManager.getInstance(currentProject)
-            codeStyleManager.reformat(documentationTestFile)
-
-            documentationTestFile = directory.add(documentationTestFile) as PsiFile
-        }
-
+        
         val documentationTestClass = documentationTestFile.childrenOfType<PsiClass>()[0]
 
         addMockMvcFieldIfMissing(elementFactory, documentationTestClass)
@@ -229,6 +191,125 @@ class GenerateRestDocsTestAction : AnAction() {
             addedDocumentationTestMethod.navigate(true)
         } else {
             documentationTestMethod.navigate(true)
+        }
+    }
+
+    private fun createOrGetDocumentationTestFile(
+        restController: PsiClass,
+        currentProject: Project,
+        testSourceRoot: VirtualFile,
+        elementFactory: PsiElementFactory
+    ): PsiFile {
+        var documentationTestFile = RestDocsHelper.getCorrespondingDocumentationTestFile(
+            testSourceRoot,
+            restController
+        )
+        if (documentationTestFile == null) {
+
+            val fileContentBuilder = StringBuilder()
+            
+            fileContentBuilder.append(packageStatement(restController))
+            fileContentBuilder.append(importsForDocumentationTest())
+
+            val documentationTestFileName =
+                RestDocsHelper.getDocumentationTestFileName(restController)
+
+            documentationTestFile = PsiFileFactory.getInstance(currentProject)
+                .createFileFromText(
+                    documentationTestFileName,
+                    JavaFileType.INSTANCE,
+                    fileContentBuilder.toString()
+                )
+
+            val restDocumentationTestClass =
+                generateRestDocumentationTestClass(elementFactory, documentationTestFileName, restController)
+
+            documentationTestFile.add(restDocumentationTestClass)
+
+            formatDocumentationTestFile(currentProject, documentationTestFile)
+
+            val testSourceRootDirectory =
+                PsiManager.getInstance(currentProject).findDirectory(testSourceRoot)!!
+
+            val directory =
+                createPackageDirectoriesIfNeeded(testSourceRootDirectory, restController)
+            documentationTestFile = directory.add(documentationTestFile) as PsiFile
+        }
+        
+        return documentationTestFile
+    }
+
+    private fun packageStatement(
+        restController: PsiClass,
+    ) : String {
+        val packageName = RestDocsHelper.getPackageName(restController)
+
+        val builder = StringBuilder()
+
+        if (packageName.isNotEmpty()) {
+            builder.appendLine("package $packageName;")
+        }
+        return builder.toString()
+    }
+
+    private fun generateRestDocumentationTestClass(
+        elementFactory: PsiElementFactory,
+        classFileName: String,
+        restController: PsiClass
+    ): PsiClass {
+        val restDocumentationTestClass =
+            elementFactory.createClass(classFileName.removeSuffix(".java"))
+        
+        PsiUtil.setModifierProperty(restDocumentationTestClass, PsiModifier.PACKAGE_LOCAL, true)
+        restDocumentationTestClass.modifierList?.addAnnotation("WebMvcTest(${restController.name}.class)")
+        restDocumentationTestClass.modifierList?.addAnnotation("AutoConfigureRestDocs")
+        restDocumentationTestClass.modifierList?.addAnnotation("ExtendWith({RestDocumentationExtension.class})")
+        
+        return restDocumentationTestClass
+    }
+
+    private fun importsForDocumentationTest() : String {
+        val builder = StringBuilder()
+        
+        builder.appendLine()
+        builder.appendLine("import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;")
+        builder.appendLine("import static org.springframework.restdocs.payload.PayloadDocumentation.*;")
+        builder.appendLine("import static org.springframework.restdocs.request.RequestDocumentation.*;")
+        builder.appendLine("import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;")
+        builder.appendLine("import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;")
+        builder.appendLine()
+        builder.appendLine("import org.junit.jupiter.api.Test;")
+        builder.appendLine()
+        builder.appendLine("import org.junit.jupiter.api.extension.ExtendWith;")
+        builder.appendLine("import org.springframework.beans.factory.annotation.Autowired;")
+        builder.appendLine("import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs;")
+        builder.appendLine("import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;")
+        builder.appendLine("import org.springframework.http.MediaType;")
+        builder.appendLine("import org.springframework.restdocs.RestDocumentationExtension;")
+        builder.appendLine()
+        
+        return builder.toString()
+    }
+
+    private fun formatDocumentationTestFile(
+        currentProject: Project,
+        documentationTestFile: PsiFile
+    ) {
+        val codeStyleManager = CodeStyleManager.getInstance(currentProject)
+        codeStyleManager.reformat(documentationTestFile)
+    }
+    
+    private fun addMockMvcFieldIfMissing(
+        elementFactory: PsiElementFactory,
+        documentationTestClass: PsiClass
+    ) {
+        val mockMvcType =
+            elementFactory.createTypeByFQClassName("org.springframework.test.web.servlet.MockMvc")
+        if (documentationTestClass.fields.stream().noneMatch { it.type == mockMvcType }) {
+            val mockMvcField = elementFactory.createField("mockMvc", mockMvcType)
+            PsiUtil.setModifierProperty(mockMvcField, PsiModifier.PRIVATE, true)
+            mockMvcField.modifierList?.addAnnotation("Autowired")
+            documentationTestClass.add(mockMvcField)
         }
     }
 
@@ -327,40 +408,6 @@ class GenerateRestDocsTestAction : AnAction() {
         methodBodyBuilder.append(")\n);")
         val methodBody = methodBodyBuilder.toString()
         return methodBody
-    }
-
-
-    private fun addMockMvcFieldIfMissing(
-        elementFactory: PsiElementFactory,
-        documentationTestClass: PsiClass
-    ) {
-        val mockMvcType =
-            elementFactory.createTypeByFQClassName("org.springframework.test.web.servlet.MockMvc")
-        if (documentationTestClass.fields.stream().noneMatch { it.type == mockMvcType }) {
-            val mockMvcField = elementFactory.createField("mockMvc", mockMvcType)
-            PsiUtil.setModifierProperty(mockMvcField, PsiModifier.PRIVATE, true)
-            mockMvcField.modifierList?.addAnnotation("Autowired")
-            documentationTestClass.add(mockMvcField)
-        }
-    }
-
-    private fun addImportsToDocumentationTest(builder: StringBuilder) {
-        builder.appendLine()
-        builder.appendLine("import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;")
-        builder.appendLine("import static org.springframework.restdocs.payload.PayloadDocumentation.*;")
-        builder.appendLine("import static org.springframework.restdocs.request.RequestDocumentation.*;")
-        builder.appendLine("import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;")
-        builder.appendLine("import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;")
-        builder.appendLine()
-        builder.appendLine("import org.junit.jupiter.api.Test;")
-        builder.appendLine()
-        builder.appendLine("import org.junit.jupiter.api.extension.ExtendWith;")
-        builder.appendLine("import org.springframework.beans.factory.annotation.Autowired;")
-        builder.appendLine("import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs;")
-        builder.appendLine("import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;")
-        builder.appendLine("import org.springframework.http.MediaType;")
-        builder.appendLine("import org.springframework.restdocs.RestDocumentationExtension;")
-        builder.appendLine()
     }
 
     private fun generateQueryParametersDocumentation(queryParameters: List<PsiParameter>): String {
