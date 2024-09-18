@@ -2,12 +2,14 @@ package be.sweetmustard.springrestdocsgenerator
 
 import be.sweetmustard.springrestdocsgenerator.GenerateRestDocsTestAction.SelectionItemType.CREATE
 import be.sweetmustard.springrestdocsgenerator.GenerateRestDocsTestAction.SelectionItemType.JUMP
+import com.intellij.codeInsight.hint.HintManager
 import com.intellij.icons.AllIcons
 import com.intellij.ide.highlighter.JavaFileType
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.vfs.VirtualFile
@@ -29,11 +31,30 @@ import javax.swing.ListSelectionModel
 
 class GenerateRestDocsTestAction : AnAction() {
     override fun actionPerformed(event: AnActionEvent) {
-        val selectedMethod: PsiElement? = event.getData(CommonDataKeys.PSI_ELEMENT)
+        val selectedElement: PsiElement? = event.getData(CommonDataKeys.PSI_ELEMENT)
+        val currentProject = event.project!!
+        val editor = FileEditorManager.getInstance(currentProject).selectedTextEditor!!
 
-        if (selectedMethod is PsiMethod) {
-            showCreateOrJumpDialog(event.project!!, selectedMethod, event)
+        if (selectedElement == null) {
+            HintManager.getInstance()
+                .showErrorHint(editor, "Cannot generate documentation test for selected element.")
+            return
         }
+        
+        val selectedMethod = if (selectedElement is PsiMethod) {
+            selectedElement
+        } else {
+            selectedElement.parentOfType<PsiMethod>()
+        }
+
+        if (selectedMethod == null || selectedMethod.annotations.stream().map { it.qualifiedName }
+                .noneMatch { it?.endsWith("Mapping") == true }) {
+            HintManager.getInstance()
+                .showErrorHint(editor, "Cannot generate documentation test for selected element.")
+            return
+        }
+        
+        showCreateOrJumpDialog(currentProject, selectedMethod, event)
     }
 
     private fun showCreateOrJumpDialog(
@@ -69,14 +90,14 @@ class GenerateRestDocsTestAction : AnAction() {
                 if (it.type == JUMP) {
                     it.method!!.navigate(true)
                 } else {
-                    getTestSourcesRoot(selectedMethod, event) { testSourceRoot -> 
-                    WriteCommandAction.runWriteCommandAction(
-                        currentProject,
-                        it.title,
-                        "",
-                        { generateRestDocsTest(selectedMethod, currentProject, testSourceRoot) }
-                    )
-                }
+                    getTestSourcesRoot(selectedMethod, event) { testSourceRoot ->
+                        WriteCommandAction.runWriteCommandAction(
+                            currentProject,
+                            it.title,
+                            "",
+                            { generateRestDocsTest(selectedMethod, currentProject, testSourceRoot) }
+                        )
+                    }
                 }
             }
             .createPopup()
@@ -124,7 +145,11 @@ class GenerateRestDocsTestAction : AnAction() {
             .showInBestPositionFor(event.dataContext)
     }
 
-    private fun generateRestDocsTest(selectedMethod: PsiMethod, currentProject: Project, testSourceRoot: VirtualFile) {
+    private fun generateRestDocsTest(
+        selectedMethod: PsiMethod,
+        currentProject: Project,
+        testSourceRoot: VirtualFile
+    ) {
         val methodBody = generateMethodBody(selectedMethod)
 
         generateRestDocsTest(selectedMethod, methodBody, currentProject, testSourceRoot)
@@ -325,7 +350,7 @@ class GenerateRestDocsTestAction : AnAction() {
             val mockMvcField = elementFactory.createField("mockMvc", mockMvcType)
             PsiUtil.setModifierProperty(mockMvcField, PsiModifier.PRIVATE, true)
             mockMvcField.modifierList?.addAnnotation("Autowired")
-            documentationTestClass.add(mockMvcField) 
+            documentationTestClass.add(mockMvcField)
         }
     }
 
