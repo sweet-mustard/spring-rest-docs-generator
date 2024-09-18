@@ -32,15 +32,102 @@ class GenerateRestDocsTestAction : AnAction() {
         val selectedMethod: PsiElement? = event.getData(CommonDataKeys.PSI_ELEMENT)
 
         if (selectedMethod is PsiMethod) {
-
             showCreateOrJumpDialog(event.project!!, selectedMethod, event)
         }
     }
 
-    private fun generateRestDocsTest(selectedMethod: PsiMethod) {
+    private fun showCreateOrJumpDialog(
+        currentProject: Project,
+        selectedMethod: PsiMethod,
+        event: AnActionEvent
+    ) {
+        val documentationTest =
+            RestDocsHelper.getDocumentationTestForMethod(selectedMethod)
+        val items = if (documentationTest != null) {
+            listOf(
+                SelectionItem(JUMP, "Jump to " + documentationTest.name, documentationTest),
+            )
+        } else {
+            listOf(SelectionItem(CREATE, "Create new Documentation Test ...", null))
+        }
+        JBPopupFactory.getInstance().createPopupChooserBuilder(items)
+            .setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
+            .setTitle("Create Documentation Test for " + selectedMethod.name)
+            .setRenderer(object : ColoredListCellRenderer<SelectionItem>() {
+                override fun customizeCellRenderer(
+                    list: JList<out SelectionItem>,
+                    value: SelectionItem,
+                    index: Int,
+                    selected: Boolean,
+                    hasFocus: Boolean
+                ) {
+                    icon = value.getIcon()
+                    append(value.title)
+                }
+            })
+            .setItemChosenCallback {
+                if (it.type == JUMP) {
+                    it.method!!.navigate(true)
+                } else {
+                    getTestSourcesRoot(selectedMethod, event) { testSourceRoot -> 
+                    WriteCommandAction.runWriteCommandAction(
+                        currentProject,
+                        it.title,
+                        "",
+                        { generateRestDocsTest(selectedMethod, currentProject, testSourceRoot) }
+                    )
+                }
+                }
+            }
+            .createPopup()
+            .showInBestPositionFor(event.dataContext)
+    }
+
+    private fun getTestSourcesRoot(
+        selectedMethod: PsiMethod,
+        event: AnActionEvent,
+        callback: Consumer<VirtualFile>
+    ) {
+        val testSourceRoots = RestDocsHelper.getPossibleTestSourceRoots(selectedMethod)
+        if (testSourceRoots.size != 1) {
+            allowUserToSelectTestSourceRoot(testSourceRoots, selectedMethod, callback, event)
+        } else {
+            callback.accept(testSourceRoots[0])
+        }
+    }
+
+    private fun allowUserToSelectTestSourceRoot(
+        testSourceRoots: List<VirtualFile>,
+        selectedMethod: PsiMethod,
+        callback: Consumer<VirtualFile>,
+        event: AnActionEvent
+    ) {
+        JBPopupFactory.getInstance().createPopupChooserBuilder(testSourceRoots)
+            .setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
+            .setTitle("Choose test sources root for " + selectedMethod.name + " Rest Documentation Test generation")
+            .setRenderer(object : ColoredListCellRenderer<VirtualFile>() {
+                override fun customizeCellRenderer(
+                    list: JList<out VirtualFile>,
+                    value: VirtualFile,
+                    index: Int,
+                    selected: Boolean,
+                    hasFocus: Boolean
+                ) {
+                    icon = AllIcons.Modules.TestRoot
+                    append(value.presentableName)
+                }
+            })
+            .setItemChosenCallback {
+                callback.accept(it)
+            }
+            .createPopup()
+            .showInBestPositionFor(event.dataContext)
+    }
+
+    private fun generateRestDocsTest(selectedMethod: PsiMethod, currentProject: Project, testSourceRoot: VirtualFile) {
         val methodBody = generateMethodBody(selectedMethod)
 
-        generateRestDocsTest(selectedMethod, methodBody)
+        generateRestDocsTest(selectedMethod, methodBody, currentProject, testSourceRoot)
     }
 
     private fun generateMethodBody(selectedMethod: PsiMethod): String {
@@ -140,14 +227,17 @@ class GenerateRestDocsTestAction : AnAction() {
         return methodBody
     }
 
-    private fun generateRestDocsTest(selectedMethod: PsiMethod, methodBody: String) {
-        val currentProject = selectedMethod.project
+    private fun generateRestDocsTest(
+        selectedMethod: PsiMethod,
+        methodBody: String,
+        currentProject: Project,
+        testSourceRoot: VirtualFile
+    ) {
         val elementFactory = JavaPsiFacade.getInstance(currentProject).elementFactory
 
         val restController = selectedMethod.parentOfType<PsiClass>()!!
 
-        val possibleTestSourceRoots = RestDocsHelper.getPossibleTestSourceRoots(restController)
-        val testSourceRoot = possibleTestSourceRoots[0]
+        RestDocsHelper.getPossibleTestSourceRoots(restController)
         var documentationTestFile = RestDocsHelper.getCorrespondingDocumentationTestFile(
             testSourceRoot,
             restController
@@ -188,18 +278,13 @@ class GenerateRestDocsTestAction : AnAction() {
             documentationTestFile.add(restDocumentationTestClass)
             val codeStyleManager = CodeStyleManager.getInstance(currentProject)
             codeStyleManager.reformat(documentationTestFile)
-            
 
-            WriteCommandAction.runWriteCommandAction(currentProject) {
-                directory.add(documentationTestFile)
-            }
-            
+            documentationTestFile = directory.add(documentationTestFile) as PsiFile
         }
 
-        println("Generating class body")
         val documentationTestClass = documentationTestFile.childrenOfType<PsiClass>()[0]
 
-        addMockMvcFieldIfMissing(elementFactory, documentationTestClass, currentProject)
+        addMockMvcFieldIfMissing(elementFactory, documentationTestClass)
 
         val documentationTestName = selectedMethod.name + "Example"
 
@@ -207,9 +292,7 @@ class GenerateRestDocsTestAction : AnAction() {
             .filter { it.name == documentationTestName }
             .getIfSingle()
 
-        println("Generating test method")
         if (documentationTestMethod == null) {
-            println("Null test method -> Generating new")
 
             documentationTestMethod =
                 elementFactory.createMethod(documentationTestName, PsiTypes.voidType())
@@ -222,113 +305,19 @@ class GenerateRestDocsTestAction : AnAction() {
                     documentationTestMethod
                 )
             )
-            WriteCommandAction.runWriteCommandAction(
-                currentProject,
-                "Adding Shizzle",
-                "",
-                {
-                    val addedDocumentationTestMethod = documentationTestClass.add(
-                        documentationTestMethod
-                    ) as PsiMethod
-                    addedDocumentationTestMethod.navigate(true)
-                }
-            )
+            val addedDocumentationTestMethod = documentationTestClass.add(
+                documentationTestMethod
+            ) as PsiMethod
+            addedDocumentationTestMethod.navigate(true)
         } else {
             documentationTestMethod.navigate(true)
         }
     }
 
-    private fun showCreateOrJumpDialog(
-        currentProject: Project,
-        selectedMethod: PsiMethod,
-        event: AnActionEvent
-    ) {
-        val documentationTest =
-            RestDocsHelper.getDocumentationTestForMethod(selectedMethod)
-        val items = if (documentationTest != null) {
-            listOf(
-                SelectionItem(JUMP, "Jump to " + documentationTest.name, documentationTest),
-            )
-        } else {
-            listOf(SelectionItem(CREATE, "Create new Documentation Test ...", null))
-        }
-        JBPopupFactory.getInstance().createPopupChooserBuilder(items)
-            .setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
-            .setTitle("Create Documentation Test for " + selectedMethod.name)
-            .setRenderer(object : ColoredListCellRenderer<SelectionItem>() {
-                override fun customizeCellRenderer(
-                    list: JList<out SelectionItem>,
-                    value: SelectionItem,
-                    index: Int,
-                    selected: Boolean,
-                    hasFocus: Boolean
-                ) {
-                    icon = value.getIcon()
-                    append(value.title)
-                }
-            })
-            .setItemChosenCallback {
-                if (it.type == JUMP) {
-                    it.method!!.navigate(true)
-                } else {
-                    WriteCommandAction.runWriteCommandAction(
-                        currentProject,
-                        it.title,
-                        "",
-                        { generateRestDocsTest(selectedMethod) }
-                    )
-                }
-            }
-            .createPopup()
-            .showInBestPositionFor(event.dataContext)
-    }
-
-    private fun getTestSourcesRoot(
-        selectedMethod: PsiMethod,
-        event: AnActionEvent,
-        callback: Consumer<VirtualFile>
-    ) {
-        val testSourceRoots = RestDocsHelper.getPossibleTestSourceRoots(selectedMethod)
-        if (testSourceRoots.size != 1) {
-            allowUserToSelectTestSourceRoot(testSourceRoots, selectedMethod, callback, event)
-        } else {
-            callback.accept(testSourceRoots[0])
-        }
-    }
-
-    private fun allowUserToSelectTestSourceRoot(
-        testSourceRoots: List<VirtualFile>,
-        selectedMethod: PsiMethod,
-        callback: Consumer<VirtualFile>,
-        event: AnActionEvent
-    ) {
-        JBPopupFactory.getInstance().createPopupChooserBuilder(testSourceRoots)
-            .setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
-            .setTitle("Choose test sources root for " + selectedMethod.name + " Rest Documentation Test generation")
-            .setRenderer(object : ColoredListCellRenderer<VirtualFile>() {
-                override fun customizeCellRenderer(
-                    list: JList<out VirtualFile>,
-                    value: VirtualFile,
-                    index: Int,
-                    selected: Boolean,
-                    hasFocus: Boolean
-                ) {
-                    icon = AllIcons.Modules.TestRoot
-                    append(value.presentableName)
-                }
-            })
-            .setItemChosenCallback {
-                callback.accept(it)
-            }
-            .createPopup()
-            .showInBestPositionFor(event.dataContext)
-    }
-
 
     private fun addMockMvcFieldIfMissing(
         elementFactory: PsiElementFactory,
-        documentationTestClass: PsiClass,
-        currentProject: Project
+        documentationTestClass: PsiClass
     ) {
         val mockMvcType =
             elementFactory.createTypeByFQClassName("org.springframework.test.web.servlet.MockMvc")
@@ -336,12 +325,7 @@ class GenerateRestDocsTestAction : AnAction() {
             val mockMvcField = elementFactory.createField("mockMvc", mockMvcType)
             PsiUtil.setModifierProperty(mockMvcField, PsiModifier.PRIVATE, true)
             mockMvcField.modifierList?.addAnnotation("Autowired")
-            WriteCommandAction.runWriteCommandAction(
-                currentProject,
-                "Adding Mock Mvc",
-                "",
-                { documentationTestClass.add(mockMvcField) }
-            )
+            documentationTestClass.add(mockMvcField) 
         }
     }
 
