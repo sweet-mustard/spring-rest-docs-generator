@@ -71,6 +71,7 @@ class GenerateRestDocsTestAction : AnAction() {
         } else {
             listOf(SelectionItem(CREATE, "Create new Documentation Test ...", null))
         }
+        
         JBPopupFactory.getInstance().createPopupChooserBuilder(items)
             .setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
             .setTitle("Create Documentation Test for " + selectedMethod.name)
@@ -87,10 +88,9 @@ class GenerateRestDocsTestAction : AnAction() {
                 }
             })
             .setItemChosenCallback {
-                if (it.type == JUMP) {
-                    it.method!!.navigate(true)
-                } else {
-                    getTestSourcesRoot(selectedMethod, event) { testSourceRoot ->
+                when (it.type) {
+                    JUMP -> it.method!!.navigate(true)
+                    CREATE -> getTestSourcesRoot(selectedMethod, event) { testSourceRoot ->
                         WriteCommandAction.runWriteCommandAction(
                             currentProject,
                             it.title,
@@ -145,6 +145,92 @@ class GenerateRestDocsTestAction : AnAction() {
             .showInBestPositionFor(event.dataContext)
     }
 
+
+    private fun generateRestDocsTest(
+        selectedMethod: PsiMethod,
+        currentProject: Project,
+        testSourceRoot: VirtualFile
+    ) {
+        val elementFactory = JavaPsiFacade.getInstance(currentProject).elementFactory
+
+        val restController = selectedMethod.parentOfType<PsiClass>()!!
+
+        RestDocsHelper.getPossibleTestSourceRoots(restController)
+        var documentationTestFile = RestDocsHelper.getCorrespondingDocumentationTestFile(
+            testSourceRoot,
+            restController
+        )
+
+        if (documentationTestFile == null) {
+            val packageName = RestDocsHelper.getPackageName(restController)
+            val testSourceRootDirectory =
+                PsiManager.getInstance(currentProject).findDirectory(testSourceRoot)!!
+
+            val directory =
+                createPackageDirectoriesIfNeeded(testSourceRootDirectory, restController)
+
+            val builder = StringBuilder()
+            if (packageName.isNotEmpty()) {
+                builder.appendLine("package $packageName;")
+                builder.appendLine()
+            }
+            addImportsToDocumentationTest(builder)
+
+            val documentationTestName =
+                RestDocsHelper.getDocumentationTestFileName(restController)
+
+            documentationTestFile = PsiFileFactory.getInstance(currentProject)
+                .createFileFromText(
+                    documentationTestName,
+                    JavaFileType.INSTANCE,
+                    builder.toString()
+                )
+
+            val restDocumentationTestClass =
+                elementFactory.createClass(documentationTestName.removeSuffix(".java"))
+            PsiUtil.setModifierProperty(restDocumentationTestClass, PsiModifier.PACKAGE_LOCAL, true)
+            restDocumentationTestClass.modifierList?.addAnnotation("WebMvcTest(${restController.name}.class)")
+            restDocumentationTestClass.modifierList?.addAnnotation("AutoConfigureRestDocs")
+            restDocumentationTestClass.modifierList?.addAnnotation("ExtendWith({RestDocumentationExtension.class})")
+
+            documentationTestFile.add(restDocumentationTestClass)
+            val codeStyleManager = CodeStyleManager.getInstance(currentProject)
+            codeStyleManager.reformat(documentationTestFile)
+
+            documentationTestFile = directory.add(documentationTestFile) as PsiFile
+        }
+
+        val documentationTestClass = documentationTestFile.childrenOfType<PsiClass>()[0]
+
+        addMockMvcFieldIfMissing(elementFactory, documentationTestClass)
+
+        val documentationTestName = selectedMethod.name + "Example"
+
+        var documentationTestMethod = documentationTestClass.methods.stream()
+            .filter { it.name == documentationTestName }
+            .getIfSingle()
+
+        if (documentationTestMethod == null) {
+
+            documentationTestMethod =
+                elementFactory.createMethod(documentationTestName, PsiTypes.voidType())
+            PsiUtil.addException(documentationTestMethod, "Exception")
+            documentationTestMethod.modifierList.addAnnotation("Test")
+            PsiUtil.setModifierProperty(documentationTestMethod, PsiModifier.PACKAGE_LOCAL, true)
+            documentationTestMethod.body!!.add(
+                elementFactory.createStatementFromText(
+                    generateMethodBody(selectedMethod),
+                    documentationTestMethod
+                )
+            )
+            val addedDocumentationTestMethod = documentationTestClass.add(
+                documentationTestMethod
+            ) as PsiMethod
+            addedDocumentationTestMethod.navigate(true)
+        } else {
+            documentationTestMethod.navigate(true)
+        }
+    }
 
     private fun generateMethodBody(selectedMethod: PsiMethod): String {
         val requestMappingOfMethod = getRequestMappingOfMethod(selectedMethod)
@@ -241,92 +327,6 @@ class GenerateRestDocsTestAction : AnAction() {
         methodBodyBuilder.append(")\n);")
         val methodBody = methodBodyBuilder.toString()
         return methodBody
-    }
-
-    private fun generateRestDocsTest(
-        selectedMethod: PsiMethod,
-        currentProject: Project,
-        testSourceRoot: VirtualFile
-    ) {
-        val elementFactory = JavaPsiFacade.getInstance(currentProject).elementFactory
-
-        val restController = selectedMethod.parentOfType<PsiClass>()!!
-
-        RestDocsHelper.getPossibleTestSourceRoots(restController)
-        var documentationTestFile = RestDocsHelper.getCorrespondingDocumentationTestFile(
-            testSourceRoot,
-            restController
-        )
-
-        if (documentationTestFile == null) {
-            val packageName = RestDocsHelper.getPackageName(restController)
-            val testSourceRootDirectory =
-                PsiManager.getInstance(currentProject).findDirectory(testSourceRoot)!!
-
-            val directory =
-                createPackageDirectoriesIfNeeded(testSourceRootDirectory, restController)
-
-            val builder = StringBuilder()
-            if (packageName.isNotEmpty()) {
-                builder.appendLine("package $packageName;")
-                builder.appendLine()
-            }
-            addImportsToDocumentationTest(builder)
-
-            val documentationTestName =
-                RestDocsHelper.getDocumentationTestFileName(restController)
-
-            documentationTestFile = PsiFileFactory.getInstance(currentProject)
-                .createFileFromText(
-                    documentationTestName,
-                    JavaFileType.INSTANCE,
-                    builder.toString()
-                )
-
-            val restDocumentationTestClass =
-                elementFactory.createClass(documentationTestName.removeSuffix(".java"))
-            PsiUtil.setModifierProperty(restDocumentationTestClass, PsiModifier.PACKAGE_LOCAL, true)
-            restDocumentationTestClass.modifierList?.addAnnotation("WebMvcTest(${restController.name}.class)")
-            restDocumentationTestClass.modifierList?.addAnnotation("AutoConfigureRestDocs")
-            restDocumentationTestClass.modifierList?.addAnnotation("ExtendWith({RestDocumentationExtension.class})")
-
-            documentationTestFile.add(restDocumentationTestClass)
-            val codeStyleManager = CodeStyleManager.getInstance(currentProject)
-            codeStyleManager.reformat(documentationTestFile)
-
-            documentationTestFile = directory.add(documentationTestFile) as PsiFile
-        }
-
-        val documentationTestClass = documentationTestFile.childrenOfType<PsiClass>()[0]
-
-        addMockMvcFieldIfMissing(elementFactory, documentationTestClass)
-
-        val documentationTestName = selectedMethod.name + "Example"
-
-        var documentationTestMethod = documentationTestClass.methods.stream()
-            .filter { it.name == documentationTestName }
-            .getIfSingle()
-
-        if (documentationTestMethod == null) {
-
-            documentationTestMethod =
-                elementFactory.createMethod(documentationTestName, PsiTypes.voidType())
-            PsiUtil.addException(documentationTestMethod, "Exception")
-            documentationTestMethod.modifierList.addAnnotation("Test")
-            PsiUtil.setModifierProperty(documentationTestMethod, PsiModifier.PACKAGE_LOCAL, true)
-            documentationTestMethod.body!!.add(
-                elementFactory.createStatementFromText(
-                    generateMethodBody(selectedMethod),
-                    documentationTestMethod
-                )
-            )
-            val addedDocumentationTestMethod = documentationTestClass.add(
-                documentationTestMethod
-            ) as PsiMethod
-            addedDocumentationTestMethod.navigate(true)
-        } else {
-            documentationTestMethod.navigate(true)
-        }
     }
 
 
