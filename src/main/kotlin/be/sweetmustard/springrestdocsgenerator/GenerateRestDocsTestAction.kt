@@ -145,15 +145,6 @@ class GenerateRestDocsTestAction : AnAction() {
             .showInBestPositionFor(event.dataContext)
     }
 
-    private fun generateRestDocsTest(
-        selectedMethod: PsiMethod,
-        currentProject: Project,
-        testSourceRoot: VirtualFile
-    ) {
-        val methodBody = generateMethodBody(selectedMethod)
-
-        generateRestDocsTest(selectedMethod, methodBody, currentProject, testSourceRoot)
-    }
 
     private fun generateMethodBody(selectedMethod: PsiMethod): String {
         val requestMappingOfMethod = getRequestMappingOfMethod(selectedMethod)
@@ -254,7 +245,6 @@ class GenerateRestDocsTestAction : AnAction() {
 
     private fun generateRestDocsTest(
         selectedMethod: PsiMethod,
-        methodBody: String,
         currentProject: Project,
         testSourceRoot: VirtualFile
     ) {
@@ -326,7 +316,7 @@ class GenerateRestDocsTestAction : AnAction() {
             PsiUtil.setModifierProperty(documentationTestMethod, PsiModifier.PACKAGE_LOCAL, true)
             documentationTestMethod.body!!.add(
                 elementFactory.createStatementFromText(
-                    methodBody,
+                    generateMethodBody(selectedMethod),
                     documentationTestMethod
                 )
             )
