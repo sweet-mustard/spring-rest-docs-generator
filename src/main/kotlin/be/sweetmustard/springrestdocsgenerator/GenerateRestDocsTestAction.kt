@@ -95,7 +95,7 @@ class GenerateRestDocsTestAction : AnAction() {
                             currentProject,
                             it.title,
                             "",
-                            { generateRestDocsTest(selectedMethod, currentProject, testSourceRoot) }
+                            { generateRestDocumentationTest(selectedMethod, currentProject, testSourceRoot) }
                         )
                     }
                 }
@@ -146,7 +146,7 @@ class GenerateRestDocsTestAction : AnAction() {
     }
 
 
-    private fun generateRestDocsTest(
+    private fun generateRestDocumentationTest(
         selectedMethod: PsiMethod,
         currentProject: Project,
         testSourceRoot: VirtualFile
@@ -166,6 +166,17 @@ class GenerateRestDocsTestAction : AnAction() {
 
         addMockMvcFieldIfMissing(elementFactory, documentationTestClass)
 
+        val documentationTestMethod =
+            getOrCreateDocumentationTestMethod(selectedMethod, documentationTestClass, elementFactory)
+
+        documentationTestMethod.navigate(true)
+    }
+
+    private fun getOrCreateDocumentationTestMethod(
+        selectedMethod: PsiMethod,
+        documentationTestClass: PsiClass,
+        elementFactory: PsiElementFactory
+    ): PsiMethod {
         val documentationTestName = selectedMethod.name + "Example"
 
         var documentationTestMethod = documentationTestClass.methods.stream()
@@ -173,24 +184,22 @@ class GenerateRestDocsTestAction : AnAction() {
             .getIfSingle()
 
         if (documentationTestMethod == null) {
-
             documentationTestMethod =
                 elementFactory.createMethod(documentationTestName, PsiTypes.voidType())
+            
             PsiUtil.addException(documentationTestMethod, "Exception")
             documentationTestMethod.modifierList.addAnnotation("Test")
             PsiUtil.setModifierProperty(documentationTestMethod, PsiModifier.PACKAGE_LOCAL, true)
+            
             documentationTestMethod.body!!.add(
                 elementFactory.createStatementFromText(
                     generateMethodBody(selectedMethod),
                     documentationTestMethod
                 )
             )
-            val addedDocumentationTestMethod = documentationTestClass.add(
-                documentationTestMethod
-            ) as PsiMethod
-            addedDocumentationTestMethod.navigate(true)
+            return documentationTestClass.add(documentationTestMethod) as PsiMethod
         } else {
-            documentationTestMethod.navigate(true)
+            return documentationTestMethod
         }
     }
 
