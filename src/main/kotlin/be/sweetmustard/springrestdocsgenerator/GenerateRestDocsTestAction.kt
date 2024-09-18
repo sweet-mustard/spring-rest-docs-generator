@@ -377,12 +377,19 @@ class GenerateRestDocsTestAction : AnAction() {
 
         val responseObject = PsiTypesUtil.getPsiClass(selectedMethod.returnType)
 
-        methodBodyBuilder.append("mockMvc.perform(${requestMappingType?.toLowerCasePreservingASCIIRules()}(\"$requestUri\"")
-        if (pathParameters.isNotEmpty()) {
-            methodBodyBuilder.append(", ".repeat(pathParameters.size))
-        }
-        methodBodyBuilder.appendLine(")")
+        
+        methodBodyBuilder.append("mockMvc.perform")
+        methodBodyBuilder.openParenthesis()
+        
+        methodBodyBuilder.append("${requestMappingType?.toLowerCasePreservingASCIIRules()}")
+        methodBodyBuilder.openParenthesis()
+        
+        methodBodyBuilder.append("\"$requestUri\"")
+        methodBodyBuilder.append(", ".repeat(pathParameters.size))
+        methodBodyBuilder.closeParenthesis()
+        
         if (queryParameters.isNotEmpty()) {
+            methodBodyBuilder.appendLine()
             methodBodyBuilder.appendLine(queryParameters.stream()
                 .map { param -> ".param(\"${param.name}\", )" }
                 .reduce { a, b -> "$a\n$b" }
@@ -391,18 +398,24 @@ class GenerateRestDocsTestAction : AnAction() {
         if (requestObjectClass != null) {
             val requestObjectFields = requestObjectClass.fields
             methodBodyBuilder.appendLine(".contentType(MediaType.APPLICATION_JSON)")
-            methodBodyBuilder.appendLine(".content(\"\"\"\n{")
-            methodBodyBuilder.appendLine(requestObjectFields.stream()
-                .map { field -> "\"${field.name}\":" }
-                .reduce { a: String, b: String -> "$a,\n$b" }
-                .orElse(""))
-            methodBodyBuilder.appendLine("}\n\"\"\")")
+            methodBodyBuilder.append(".content")
+            
+            methodBodyBuilder.openParenthesis()
+            methodBodyBuilder.append(generateJsonRequestObject(requestObjectFields))
+            methodBodyBuilder.closeParenthesis()
         }
-        methodBodyBuilder.appendLine(")")
-        methodBodyBuilder.appendLine(".andExpect(status().is" + httpStatus?.removePrefix("HttpStatus.")
-            ?.toLowerCasePreservingASCIIRules()
-            ?.replaceFirstChar { c -> c.uppercaseChar() } + "())")
-        methodBodyBuilder.appendLine(".andDo(document(\"${selectedMethod.name.camelToKebabCase()}\",")
+        methodBodyBuilder.closeParenthesis()
+        methodBodyBuilder.appendLine()
+        
+        methodBodyBuilder.appendLine(".andExpect(status().is" + getExpectedStatus(httpStatus) + "())")
+        
+        methodBodyBuilder.append(".andDo")
+        methodBodyBuilder.openParenthesis()
+        
+        methodBodyBuilder.append("document")
+        methodBodyBuilder.openParenthesis()
+        
+        methodBodyBuilder.appendLine("\"${selectedMethod.name.camelToKebabCase()}\",")
         val documentationFields = listOf(
             generatePathParametersDocumentation(pathParameters),
             generateQueryParametersDocumentation(queryParameters),
@@ -414,10 +427,32 @@ class GenerateRestDocsTestAction : AnAction() {
             .orElse("")
 
         methodBodyBuilder.append(documentationFields)
-        methodBodyBuilder.append(")\n);")
+        methodBodyBuilder.closeParenthesis()
+        methodBodyBuilder.closeParenthesis()
+        methodBodyBuilder.append(";")
         val methodBody = methodBodyBuilder.toString()
+        
         return methodBody
     }
+
+    private fun generateJsonRequestObject(
+        requestObjectFields: Array<PsiField>
+    ) : String {
+
+        val jsonRequestObjectBuilder = StringBuilder()
+        jsonRequestObjectBuilder.appendLine("\"\"\"\n{")
+        jsonRequestObjectBuilder.appendLine(requestObjectFields.stream()
+            .map { field -> "\"${field.name}\":" }
+            .reduce { a: String, b: String -> "$a,\n$b" }
+            .orElse(""))
+        jsonRequestObjectBuilder.append("}\n\"\"\"")
+        
+        return jsonRequestObjectBuilder.toString()
+    }
+
+    private fun getExpectedStatus(httpStatus: String?) = httpStatus?.removePrefix("HttpStatus.")
+        ?.toLowerCasePreservingASCIIRules()
+        ?.replaceFirstChar { c -> c.uppercaseChar() }
 
     private fun generateQueryParametersDocumentation(queryParameters: List<PsiParameter>): String {
         if (queryParameters.isNotEmpty()) {
@@ -496,6 +531,14 @@ class GenerateRestDocsTestAction : AnAction() {
     private fun String.camelToKebabCase(): String {
         val pattern = "(?<=.)[A-Z]".toRegex()
         return this.replace(pattern, "-$0").lowercase()
+    }
+    
+    private fun StringBuilder.openParenthesis() {
+        this.append("(")
+    }
+
+    private fun StringBuilder.closeParenthesis() {
+        this.append(")")
     }
 
     private fun createPackageDirectoriesIfNeeded(
