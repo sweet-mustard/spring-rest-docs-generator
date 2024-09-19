@@ -375,7 +375,8 @@ class GenerateRestDocsTestAction : AnAction() {
                 }
         }.firstOrNull()
 
-        val requestObjectClass = PsiTypesUtil.getPsiClass(requestObject?.type)
+        val requestObjectType = requestObject?.type
+        val requestObjectClass = PsiTypesUtil.getPsiClass(requestObjectType)
 
         val responseStatus = selectedMethod.modifierList.annotations.filter {
             it.qualifiedName?.equals("org.springframework.web.bind.annotation.ResponseStatus")
@@ -434,7 +435,7 @@ class GenerateRestDocsTestAction : AnAction() {
         val documentationFields = listOf(
             generatePathParametersDocumentation(pathParameters),
             generateQueryParametersDocumentation(queryParameters),
-            generateRequestObjectDocumentation(requestObjectClass),
+            generateRequestObjectDocumentation(requestObjectType),
             generateResponseObjectDocumentation(responseObjectType)
         ).stream()
             .filter(String::isNotEmpty)
@@ -495,11 +496,12 @@ class GenerateRestDocsTestAction : AnAction() {
             .reduce { a, b -> "$a," + System.lineSeparator() + b }
             .orElse("")
 
-    private fun generateRequestObjectDocumentation(requestObjectClass: PsiClass?): String {
-        if (requestObjectClass != null) {
-            return "requestFields(" + System.lineSeparator() + generateDocumentationForFields(requestObjectClass.fields) + System.lineSeparator() + ")"
+    private fun generateRequestObjectDocumentation(requestObjectType: PsiType?): String {
+        val responseBuilder = StringBuilder()
+        if (requestObjectType != null) {
+            responseBuilder.appendLine(generateRequestFieldDescriptions(requestObjectType))
         }
-        return ""
+        return responseBuilder.toString()
     }
 
     private fun generateResponseObjectDocumentation(responseObjectType: PsiType?): String {
