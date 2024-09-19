@@ -18,8 +18,8 @@ class FieldDescriptionKtTest {
             FieldDescription("yResponses[].zResponse.", "id", "Id of the zResponse"),
             FieldDescription("yResponses[].zResponse.", "name", "Name of the zResponse")
         )
-        
-        assertThat(buildResponseFieldsDescriptionString(listOf)).isEqualTo("""
+
+        assertThat(buildFieldsDescriptionString(listOf, HttpObjectType.RESPONSE)).isEqualTo("""
             responseFields(
             fieldWithPath("id").description("Id of xResponse"),
             fieldWithPath("name").description("Name of xResponse"),

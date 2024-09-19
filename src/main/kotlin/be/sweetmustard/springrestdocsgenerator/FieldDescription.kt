@@ -19,14 +19,14 @@ data class FieldDescription(
     } 
 }
 
-fun generateResponseFieldDescriptions(responseObjectType : PsiType): String {
+fun generateResponseFieldDescriptions(responseObjectType: PsiType): String {
     val responseFieldDescriptions = generateFieldDescriptions(responseObjectType, "")
-    return buildResponseFieldsDescriptionString(responseFieldDescriptions)
+    return buildFieldsDescriptionString(responseFieldDescriptions, HttpObjectType.RESPONSE)
 }
 
-fun generateRequestFieldDescriptions(requestObjectType : PsiType): String {
+fun generateRequestFieldDescriptions(requestObjectType: PsiType): String {
     val requestFieldDescriptions = generateFieldDescriptions(requestObjectType, "")
-    return buildRequestFieldsDescriptionString(requestFieldDescriptions)
+    return buildFieldsDescriptionString(requestFieldDescriptions, HttpObjectType.REQUEST)
 }
 
 fun generateFieldDescriptions(field : PsiField, pathPrefix : String) : List<FieldDescription> {
@@ -61,15 +61,6 @@ fun generateFieldDescriptions(classType : PsiType, pathPrefix : String) : List<F
         }
     }
     return fieldDescriptions
-}
-
-fun buildResponseFieldsDescriptionString(fieldDescriptions : List<FieldDescription>): String {
-    return buildFieldsDescriptionString(fieldDescriptions, HttpObjectType.RESPONSE)
-}
-
-fun buildRequestFieldsDescriptionString(fieldDescriptions : List<FieldDescription>): String {
-    return buildFieldsDescriptionString(fieldDescriptions, HttpObjectType.REQUEST)
-
 }
 
 fun buildFieldsDescriptionString(fieldDescriptions : List<FieldDescription>, httpObjectType: HttpObjectType): String {
