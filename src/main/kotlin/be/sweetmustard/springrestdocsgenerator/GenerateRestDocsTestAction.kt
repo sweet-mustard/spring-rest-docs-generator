@@ -15,7 +15,6 @@ import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.*
 import com.intellij.psi.codeStyle.CodeStyleManager
-import com.intellij.psi.impl.source.PsiClassReferenceType
 import com.intellij.psi.util.PsiTypesUtil
 import com.intellij.psi.util.PsiUtil
 import com.intellij.psi.util.childrenOfType
@@ -500,23 +499,7 @@ class GenerateRestDocsTestAction : AnAction() {
     private fun generateResponseObjectDocumentation(responseObjectType: PsiType?): String {
         val responseBuilder = StringBuilder()
         if (responseObjectType != null) {
-            responseBuilder.append("responseFields")
-            responseBuilder.openParenthesis()
-            responseBuilder.appendLine()
-
-            if (responseObjectType.toString().contains("List")) {
-                responseBuilder.appendLine("fieldWithPath(\"[]\").description(\"\"))")
-                responseBuilder.appendLine(".andWithPrefix(\"[].\",")
-                val typeParameters = (responseObjectType as PsiClassReferenceType).parameters
-                responseBuilder.appendLine(
-                    generateDocumentationForFields(PsiTypesUtil.getPsiClass(typeParameters[0])!!.fields)
-                )
-            } else {
-                responseBuilder.appendLine(
-                    generateDocumentationForFields(PsiTypesUtil.getPsiClass(responseObjectType)!!.fields)
-                )
-            }
-            responseBuilder.closeParenthesis()
+            responseBuilder.appendLine(generateResponseFieldDescriptions(responseObjectType))
         }
         return responseBuilder.toString()
     }
