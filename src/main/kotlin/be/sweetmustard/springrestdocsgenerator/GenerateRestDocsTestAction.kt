@@ -512,12 +512,6 @@ class GenerateRestDocsTestAction : AnAction() {
         return responseBuilder.toString()
     }
 
-    private fun generateDocumentationForFields(responseObjectFields: Array<PsiField>): String? =
-        responseObjectFields.stream()
-            .map { param -> "fieldWithPath(\"${param.name}\").description(\"\")" }
-            .reduce { a, b -> "$a," + System.lineSeparator()+ b }
-            .orElse("")
-
     private fun getRequestMappingOfParentalRestController(selectedMethod: PsiMethod): PsiAnnotation? {
         val requestMappingClassLevel =
             selectedMethod.parentOfType<PsiClass>()?.annotations

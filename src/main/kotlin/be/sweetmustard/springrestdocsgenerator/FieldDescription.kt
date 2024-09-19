@@ -1,8 +1,9 @@
 package be.sweetmustard.springrestdocsgenerator
 
-import com.intellij.psi.*
+import com.intellij.psi.PsiField
+import com.intellij.psi.PsiType
+import com.intellij.psi.PsiTypes
 import com.intellij.psi.impl.source.PsiClassReferenceType
-import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.PsiTypesUtil
 import java.util.stream.Collectors
 
@@ -63,34 +64,15 @@ fun generateFieldDescriptions(classType : PsiType, pathPrefix : String) : List<F
 }
 
 fun buildResponseFieldsDescriptionString(fieldDescriptions : List<FieldDescription>): String {
-    val fieldDescriptionsGroupedByDepth = fieldDescriptions.stream()
-        .collect(Collectors.groupingBy { it.depth() })
-    
-    val descriptions = ArrayList<String>()
-
-    for (entry in fieldDescriptionsGroupedByDepth) {
-        val fieldDescriptionsGroupedByPrefix = entry.value.stream()
-            .collect(Collectors.groupingBy { it.pathPrefix })
-
-        for (prefixGrouped in fieldDescriptionsGroupedByPrefix) {
-            val prefixLine = if (prefixGrouped.key.isNotEmpty()) ".andWithPrefix(\"" + prefixGrouped.key + "\", " else "responseFields("
-            val fieldLines = prefixGrouped.value.stream()
-                .map { "fieldWithPath(\"" + it.path + "\").description(\"" + it.description + "\")" }
-                .reduce {s, t -> s + "," + System.lineSeparator() + t }
-                .orElse("")
-
-            val element =
-                prefixLine + System.lineSeparator() + fieldLines + ")"
-            descriptions.add(element)
-        }
-    }
-    
-    return descriptions.stream()
-        .reduce {s, t, -> s + System.lineSeparator() + t}
-        .orElse("")
+    return buildFieldsDescriptionString(fieldDescriptions, HttpObjectType.RESPONSE)
 }
 
 fun buildRequestFieldsDescriptionString(fieldDescriptions : List<FieldDescription>): String {
+    return buildFieldsDescriptionString(fieldDescriptions, HttpObjectType.REQUEST)
+
+}
+
+fun buildFieldsDescriptionString(fieldDescriptions : List<FieldDescription>, httpObjectType: HttpObjectType): String {
     val fieldDescriptionsGroupedByDepth = fieldDescriptions.stream()
         .collect(Collectors.groupingBy { it.depth() })
 
@@ -101,7 +83,7 @@ fun buildRequestFieldsDescriptionString(fieldDescriptions : List<FieldDescriptio
             .collect(Collectors.groupingBy { it.pathPrefix })
 
         for (prefixGrouped in fieldDescriptionsGroupedByPrefix) {
-            val prefixLine = if (prefixGrouped.key.isNotEmpty()) ".andWithPrefix(\"" + prefixGrouped.key + "\", " else "requestFields("
+            val prefixLine = if (prefixGrouped.key.isNotEmpty()) ".andWithPrefix(\"" + prefixGrouped.key + "\", " else httpObjectType.fieldsDescription + "("
             val fieldLines = prefixGrouped.value.stream()
                 .map { "fieldWithPath(\"" + it.path + "\").description(\"" + it.description + "\")" }
                 .reduce {s, t -> s + "," + System.lineSeparator() + t }
@@ -122,3 +104,10 @@ private fun isListType(classType: PsiType) = classType.toString().contains("List
 
 private fun isBasicType(fieldType: PsiType) =
     basicTypes.stream().anyMatch { fieldType.toString().contains(it) }
+
+enum class HttpObjectType(val fieldsDescription: String) {
+    RESPONSE("responseFields"),
+    REQUEST("requestFields");
+    
+
+}
