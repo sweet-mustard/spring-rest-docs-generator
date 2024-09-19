@@ -465,9 +465,15 @@ class GenerateRestDocsTestAction : AnAction() {
         return jsonRequestObjectBuilder.toString()
     }
 
-    private fun getExpectedStatus(httpStatus: String?) = httpStatus?.removePrefix("HttpStatus.")
-        ?.toLowerCasePreservingASCIIRules()
-        ?.replaceFirstChar { c -> c.uppercaseChar() }
+    private fun getExpectedStatus(httpStatus: String?): String? {
+        return httpStatus?.removePrefix("HttpStatus.")
+            ?.toLowerCasePreservingASCIIRules()
+            ?.split("_")
+            ?.stream()
+            ?.map { s -> s.replaceFirstChar { it.uppercaseChar() } }
+            ?.toList()
+            ?.joinToString("")
+    }
 
     private fun generateQueryParametersDocumentation(queryParameters: List<PsiParameter>): String {
         if (queryParameters.isNotEmpty()) {
