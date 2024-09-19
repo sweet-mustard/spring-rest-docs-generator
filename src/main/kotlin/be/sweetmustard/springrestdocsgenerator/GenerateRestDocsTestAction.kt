@@ -407,7 +407,7 @@ class GenerateRestDocsTestAction : AnAction() {
             methodBodyBuilder.appendLine()
             methodBodyBuilder.appendLine(queryParameters.stream()
                 .map { param -> ".param(\"${param.name}\", )" }
-                .reduce { a, b -> "$a\n$b" }
+                .reduce { a, b -> a + System.lineSeparator() + b }
                 .orElse(""))
         }
         if (requestObjectClass != null) {
@@ -438,7 +438,7 @@ class GenerateRestDocsTestAction : AnAction() {
             generateResponseObjectDocumentation(responseObjectType)
         ).stream()
             .filter(String::isNotEmpty)
-            .reduce { a, b -> "$a,\n$b" }
+            .reduce { a, b -> "$a," + System.lineSeparator() + b }
             .orElse("")
 
         methodBodyBuilder.append(documentationFields)
@@ -455,12 +455,12 @@ class GenerateRestDocsTestAction : AnAction() {
     ): String {
 
         val jsonRequestObjectBuilder = StringBuilder()
-        jsonRequestObjectBuilder.appendLine("\"\"\"\n{")
+        jsonRequestObjectBuilder.appendLine("\"\"\"" + System.lineSeparator() + "{")
         jsonRequestObjectBuilder.appendLine(requestObjectFields.stream()
             .map { field -> "\"${field.name}\":" }
-            .reduce { a: String, b: String -> "$a,\n$b" }
+            .reduce { a: String, b: String -> "$a," + System.lineSeparator() + b }
             .orElse(""))
-        jsonRequestObjectBuilder.append("}\n\"\"\"")
+        jsonRequestObjectBuilder.append("}" + System.lineSeparator() + "\"\"\"")
 
         return jsonRequestObjectBuilder.toString()
     }
@@ -471,14 +471,14 @@ class GenerateRestDocsTestAction : AnAction() {
 
     private fun generateQueryParametersDocumentation(queryParameters: List<PsiParameter>): String {
         if (queryParameters.isNotEmpty()) {
-            return "queryParameters(\n" + generateDocumentationForParameters(queryParameters) + "\n)"
+            return "queryParameters(" + System.lineSeparator() + generateDocumentationForParameters(queryParameters) + System.lineSeparator() + ")"
         }
         return ""
     }
 
     private fun generatePathParametersDocumentation(pathParameters: List<PsiParameter>): String {
         if (pathParameters.isNotEmpty()) {
-            return "pathParameters(\n" + generateDocumentationForParameters(pathParameters) + "\n)"
+            return "pathParameters(" + System.lineSeparator() + generateDocumentationForParameters(pathParameters) + System.lineSeparator() +")"
         }
         return ""
     }
@@ -486,12 +486,12 @@ class GenerateRestDocsTestAction : AnAction() {
     private fun generateDocumentationForParameters(parameters: List<PsiParameter>): String? =
         parameters.stream()
             .map { param -> "parameterWithName(\"${param.name}\").description(\"\")" }
-            .reduce { a, b -> "$a,\n$b" }
+            .reduce { a, b -> "$a," + System.lineSeparator() + b }
             .orElse("")
 
     private fun generateRequestObjectDocumentation(requestObjectClass: PsiClass?): String {
         if (requestObjectClass != null) {
-            return "requestFields(\n" + generateDocumentationForFields(requestObjectClass.fields) + "\n)"
+            return "requestFields(" + System.lineSeparator() + generateDocumentationForFields(requestObjectClass.fields) + System.lineSeparator() + ")"
         }
         return ""
     }
@@ -507,7 +507,7 @@ class GenerateRestDocsTestAction : AnAction() {
     private fun generateDocumentationForFields(responseObjectFields: Array<PsiField>): String? =
         responseObjectFields.stream()
             .map { param -> "fieldWithPath(\"${param.name}\").description(\"\")" }
-            .reduce { a, b -> "$a,\n$b" }
+            .reduce { a, b -> "$a," + System.lineSeparator()+ b }
             .orElse("")
 
     private fun getRequestMappingOfParentalRestController(selectedMethod: PsiMethod): PsiAnnotation? {
