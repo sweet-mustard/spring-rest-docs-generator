@@ -33,7 +33,7 @@ fun generateFieldDescriptions(field : PsiField, pathPrefix : String) : List<Fiel
     val fieldDescriptions = ArrayList<FieldDescription>()
     
     val fieldType = field.type
-    val description = "Fill in list description for ${field.name}"
+    val description = "Fill in description for ${field.name}"
 
     if (isListType(fieldType)) {
         fieldDescriptions.add(FieldDescription(pathPrefix, field.name + "[]", description))
@@ -52,7 +52,7 @@ fun generateFieldDescriptions(classType : PsiType, pathPrefix : String) : List<F
     val fieldDescriptions = ArrayList<FieldDescription>()
     
     if (isListType(classType)) {
-        fieldDescriptions.add(FieldDescription(pathPrefix, "[]", "Fill in list description"))
+        fieldDescriptions.add(FieldDescription(pathPrefix, "[]", "Fill in description"))
         val parameterType = (classType as PsiClassReferenceType).parameters[0]
         fieldDescriptions.addAll(generateFieldDescriptions(parameterType, "$pathPrefix[]."))
     } else if (!isBasicType(classType)) {
