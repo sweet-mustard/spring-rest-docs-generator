@@ -412,12 +412,11 @@ class GenerateRestDocsTestAction : AnAction() {
                 .orElse(""))
         }
         if (requestObjectClass != null) {
-            val requestObjectFields = requestObjectClass.fields
             methodBodyBuilder.appendLine(".contentType(MediaType.APPLICATION_JSON)")
             methodBodyBuilder.append(".content")
 
             methodBodyBuilder.openParenthesis()
-            methodBodyBuilder.append(generateJsonRequestObject(requestObjectFields))
+            methodBodyBuilder.append(requestObjectType?.let { generateJsonRequestBody(it) })
             methodBodyBuilder.closeParenthesis()
         }
         methodBodyBuilder.closeParenthesis()
@@ -449,21 +448,6 @@ class GenerateRestDocsTestAction : AnAction() {
         val methodBody = methodBodyBuilder.toString()
 
         return methodBody
-    }
-
-    private fun generateJsonRequestObject(
-        requestObjectFields: Array<PsiField>
-    ): String {
-
-        val jsonRequestObjectBuilder = StringBuilder()
-        jsonRequestObjectBuilder.appendLine("\"\"\"" + System.lineSeparator() + "{")
-        jsonRequestObjectBuilder.appendLine(requestObjectFields.stream()
-            .map { field -> "\"${field.name}\":" }
-            .reduce { a: String, b: String -> "$a," + System.lineSeparator() + b }
-            .orElse(""))
-        jsonRequestObjectBuilder.append("}" + System.lineSeparator() + "\"\"\"")
-
-        return jsonRequestObjectBuilder.toString()
     }
 
     private fun getExpectedStatus(httpStatus: String?): String? {
