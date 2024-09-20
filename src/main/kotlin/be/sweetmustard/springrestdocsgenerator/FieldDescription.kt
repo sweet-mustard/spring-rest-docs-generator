@@ -1,5 +1,6 @@
 package be.sweetmustard.springrestdocsgenerator
 
+import be.sweetmustard.springrestdocsgenerator.NodeType.*
 import com.intellij.psi.PsiField
 import com.intellij.psi.PsiType
 import com.intellij.psi.PsiTypes
@@ -20,7 +21,7 @@ data class FieldDescription(
     } 
 }
 
-data class TreeNode(val name: String, val subNodes: List<TreeNode>)
+data class TreeNode(val name: String, val subNodes: List<TreeNode>, val nodeType: NodeType)
 
 fun generateResponseFieldDescriptions(responseObjectType: PsiType): String {
     val responseFieldDescriptions = generateFieldDescriptions(responseObjectType, "")
@@ -33,7 +34,7 @@ fun generateRequestFieldDescriptions(requestObjectType: PsiType): String {
 }
 
 fun generateJsonRequestBody(requestObjectType: PsiType): String {
-    val tree = TreeNode("", generateTree(requestObjectType))
+    val tree = TreeNode("", generateTree(requestObjectType), ROOT)
     return "\"\"\"" + System.lineSeparator() + buildJson(tree, 0) +  "\"\"\""
 }
 
@@ -44,7 +45,7 @@ fun generateFieldDescriptions(field : PsiField, pathPrefix : String) : List<Fiel
     val description = "Fill in description for ${field.name}"
 
     if (isListType(fieldType)) {
-        fieldDescriptions.add(FieldDescription(pathPrefix, field.name + "[]", description))
+        fieldDescriptions.add(FieldDescription(pathPrefix, field.name, description))
         val parameterType = (fieldType as PsiClassReferenceType).parameters[0]!!
         fieldDescriptions.addAll(generateFieldDescriptions(parameterType, pathPrefix + field.name + "[]."))
     } else {
@@ -78,12 +79,12 @@ fun generateTree(field : PsiField) : List<TreeNode> {
 
     if (isListType(fieldType)) {
         val parameterType = (fieldType as PsiClassReferenceType).parameters[0]!!
-        subNodes.add(TreeNode(field.name + "[]", generateTree(parameterType)))
+        subNodes.add(TreeNode(field.name, generateTree(parameterType), NAMED_LIST))
     } else {
         if (!isBasicType(fieldType)) {
-            subNodes.add(TreeNode(field.name, generateTree(fieldType)))
+            subNodes.add(TreeNode(field.name, generateTree(fieldType), COMPOSITE_OBJECT))
         } else {
-            subNodes.add(TreeNode(field.name, emptyList()))
+            subNodes.add(TreeNode(field.name, emptyList(), SIMPLE_OBJECT))
         }
     }
     return subNodes
@@ -94,7 +95,7 @@ fun generateTree(classType : PsiType) : List<TreeNode> {
 
     if (isListType(classType)) {
         val parameterType = (classType as PsiClassReferenceType).parameters[0]
-        subNodes.add(TreeNode("[]", generateTree(parameterType)))
+        subNodes.add(TreeNode("", generateTree(parameterType), UNNAMED_LIST))
     } else if (!isBasicType(classType)) {
         subNodes.addAll(PsiTypesUtil.getPsiClass(classType)?.fields!!.stream()
             .map { generateTree(it) }
@@ -106,28 +107,35 @@ fun generateTree(classType : PsiType) : List<TreeNode> {
 
 fun buildJson(treeNode: TreeNode, indent : Int) : String {
     val jsonNode = StringBuilder()
-    if (treeNode.name.isEmpty()) {
-        jsonNode.appendLine("  ".repeat(indent) + "{")
-        jsonNode.appendLine(buildJsonPiece(treeNode.subNodes, indent + 1))
-        jsonNode.appendLine("  ".repeat(indent) + "}")
-    } else if (treeNode.name == "[]") {
-        jsonNode.appendLine("  ".repeat(indent) + "[")
-        jsonNode.appendLine(buildJsonPiece(treeNode.subNodes, indent + 1))
-        jsonNode.appendLine("  ".repeat(indent) + "]")
-    } else if (treeNode.name.contains("[]") && treeNode.subNodes.isNotEmpty()) {
-        jsonNode.appendLine("  ".repeat(indent) + "\"${treeNode.name}\": [" + System.lineSeparator() + "  ".repeat(indent) + "{")
-        jsonNode.appendLine(buildJsonPiece(treeNode.subNodes, indent + 1))
-        jsonNode.appendLine("  ".repeat(indent) + "}")
-        jsonNode.append("  ".repeat(indent) + "]")
-    } else if (treeNode.name.contains("[]") && treeNode.subNodes.isEmpty()) {
-        jsonNode.appendLine("  ".repeat(indent) + "\"${treeNode.name}\": [")
-        jsonNode.append("  ".repeat(indent) + "]")
-    } else if (treeNode.subNodes.isNotEmpty()){
-        jsonNode.appendLine("  ".repeat(indent) + "\"${treeNode.name}\": {")
-        jsonNode.appendLine(buildJsonPiece(treeNode.subNodes, indent + 1))
-        jsonNode.append("  ".repeat(indent) + "}")
-    } else {
-        jsonNode.append("  ".repeat(indent) + "\"${treeNode.name}\":")
+    val indentation = "  "
+    when (treeNode.nodeType) {
+        ROOT -> {
+            jsonNode.appendLine(indentation.repeat(indent) + "{")
+            jsonNode.appendLine(buildJsonPiece(treeNode.subNodes, indent + 1))
+            jsonNode.appendLine(indentation.repeat(indent) + "}")
+        }
+        UNNAMED_LIST -> {
+            jsonNode.appendLine(indentation.repeat(indent) + "[")
+            jsonNode.appendLine(buildJsonPiece(treeNode.subNodes, indent + 1))
+            jsonNode.appendLine(indentation.repeat(indent) + "]")
+        }
+        NAMED_LIST -> {
+            jsonNode.appendLine(indentation.repeat(indent) + "\"${treeNode.name}\": [")
+            if (treeNode.subNodes.isNotEmpty()) {
+                jsonNode.appendLine(indentation.repeat(indent + 1) + "{")
+                jsonNode.appendLine(buildJsonPiece(treeNode.subNodes, indent + 1))
+                jsonNode.appendLine(indentation.repeat(indent + 1) + "}")
+            }
+            jsonNode.append(indentation.repeat(indent) + "]")
+        }
+        COMPOSITE_OBJECT -> {
+            jsonNode.appendLine(indentation.repeat(indent) + "\"${treeNode.name}\": {")
+            jsonNode.appendLine(buildJsonPiece(treeNode.subNodes, indent + 1))
+            jsonNode.append(indentation.repeat(indent) + "}")
+        }
+        SIMPLE_OBJECT -> {
+            jsonNode.append(indentation.repeat(indent) + "\"${treeNode.name}\":")
+        }
     }
     return jsonNode.toString()
 }
@@ -138,7 +146,6 @@ fun buildJsonPiece(subNodes : List<TreeNode>, indent: Int) : String {
         jsonSubNodes.add(buildJson(subNode, indent + 1))
     }
     return jsonSubNodes.stream()
-        .map { "  ".repeat(indent) + it }
         .reduce {a, b -> "$a ," + System.lineSeparator() + b}
         .orElse("")
 }
@@ -179,5 +186,12 @@ private fun isBasicType(fieldType: PsiType) =
 enum class HttpObjectType(val fieldsDescription: String) {
     RESPONSE("responseFields"),
     REQUEST("requestFields");
-    
+}
+
+enum class NodeType {
+    SIMPLE_OBJECT,
+    NAMED_LIST,
+    UNNAMED_LIST,
+    COMPOSITE_OBJECT,
+    ROOT
 }
