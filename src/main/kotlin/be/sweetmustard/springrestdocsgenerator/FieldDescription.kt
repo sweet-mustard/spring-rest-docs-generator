@@ -26,8 +26,8 @@ fun generateRequestFieldDescriptions(requestObjectType: PsiType?): String {
 }
 
 fun generateJsonRequestBody(requestObjectType: PsiType): String {
-    val tree = TreeNode("", generateTree(requestObjectType), ROOT)
-    return "\"\"\"" + System.lineSeparator() + buildJson(tree, 0) +  "\"\"\""
+    val tree = TreeNode("", generateClassTree(requestObjectType), ROOT)
+    return "\"\"\"" + System.lineSeparator() + buildJsonString(tree, 0) +  "\"\"\""
 }
 
 fun generateFieldDescriptions(field : PsiField, pathPrefix : String) : List<FieldDescription> {
@@ -92,17 +92,17 @@ fun buildFieldsDescriptionString(fieldDescriptions : List<FieldDescription>, htt
         .orElse("")
 }
 
-fun generateTree(field : PsiField) : List<TreeNode> {
+fun generateClassTree(field : PsiField) : List<TreeNode> {
     val subNodes = ArrayList<TreeNode>()
 
     val fieldType = field.type
 
     if (isListType(fieldType)) {
         val parameterType = (fieldType as PsiClassReferenceType).parameters[0]!!
-        subNodes.add(TreeNode(field.name, generateTree(parameterType), NAMED_LIST))
+        subNodes.add(TreeNode(field.name, generateClassTree(parameterType), NAMED_LIST))
     } else {
         if (!isBasicType(fieldType)) {
-            subNodes.add(TreeNode(field.name, generateTree(fieldType), COMPOSITE_OBJECT))
+            subNodes.add(TreeNode(field.name, generateClassTree(fieldType), COMPOSITE_OBJECT))
         } else {
             subNodes.add(TreeNode(field.name, emptyList(), SIMPLE_OBJECT))
         }
@@ -110,22 +110,22 @@ fun generateTree(field : PsiField) : List<TreeNode> {
     return subNodes
 }
 
-fun generateTree(classType : PsiType) : List<TreeNode> {
+fun generateClassTree(classType : PsiType) : List<TreeNode> {
     val subNodes = ArrayList<TreeNode>()
 
     if (isListType(classType)) {
         val parameterType = (classType as PsiClassReferenceType).parameters[0]
-        subNodes.add(TreeNode("", generateTree(parameterType), UNNAMED_LIST))
+        subNodes.add(TreeNode("", generateClassTree(parameterType), UNNAMED_LIST))
     } else if (!isBasicType(classType)) {
         subNodes.addAll(PsiTypesUtil.getPsiClass(classType)?.fields!!.stream()
-            .map { generateTree(it) }
+            .map { generateClassTree(it) }
             .flatMap { it.stream() }
             .toList())
     }
     return subNodes
 }
 
-fun buildJson(treeNode: TreeNode, indent : Int) : String {
+fun buildJsonString(treeNode: TreeNode, indent : Int) : String {
     val jsonNode = StringBuilder()
     val indentation = "  "
     when (treeNode.nodeType) {
@@ -162,7 +162,7 @@ fun buildJson(treeNode: TreeNode, indent : Int) : String {
 
 fun buildJsonPiece(subNodes : List<TreeNode>, indent: Int) : String {
     return subNodes.stream()
-        .map { subNode -> buildJson(subNode, indent + 1) }
+        .map { subNode -> buildJsonString(subNode, indent + 1) }
         .reduce { a, b -> "$a ," + System.lineSeparator() + b }
         .orElse("")
 }
