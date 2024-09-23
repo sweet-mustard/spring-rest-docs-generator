@@ -16,10 +16,18 @@ fun generateResponseFieldDescriptions(responseObjectType: PsiType?): String {
         return ""
     }
     if (isResponseEntityType(responseObjectType)) {
-        val responseFieldDescriptions = generateFieldDescriptions((responseObjectType as PsiClassReferenceType).parameters[0], "")
+        val responseFieldDescriptions = generateFieldDescriptions(
+            (responseObjectType as PsiClassReferenceType).parameters[0],
+            "",
+            MAXIMAL_TREE_DEPTH
+        )
         return buildFieldsDescriptionString(responseFieldDescriptions, HttpObjectType.RESPONSE)
     } else {
-        val responseFieldDescriptions = generateFieldDescriptions(responseObjectType, "")
+        val responseFieldDescriptions = generateFieldDescriptions(
+            responseObjectType,
+            "",
+            MAXIMAL_TREE_DEPTH
+        )
         return buildFieldsDescriptionString(responseFieldDescriptions, HttpObjectType.RESPONSE)
     }
 }
@@ -28,7 +36,11 @@ fun generateRequestFieldDescriptions(requestObjectType: PsiType?): String {
     if (requestObjectType == null) {
         return ""
     }
-    val requestFieldDescriptions = generateFieldDescriptions(requestObjectType, "")
+    val requestFieldDescriptions = generateFieldDescriptions(
+        requestObjectType,
+        "",
+        MAXIMAL_TREE_DEPTH
+    )
     return buildFieldsDescriptionString(requestFieldDescriptions, HttpObjectType.REQUEST)
 }
 
@@ -40,9 +52,9 @@ fun generateJsonRequestBody(requestObjectType: PsiType): String {
 private fun generateTree(type: PsiType) =
     TreeNode("", generateLeaves(type, MAXIMAL_TREE_DEPTH), ROOT)
 
-fun generateFieldDescriptions(field : PsiField, pathPrefix : String) : List<FieldDescription> {
+fun generateFieldDescriptions(field: PsiField, pathPrefix: String, remainingDepth: Int) : List<FieldDescription> {
     val fieldDescriptions = ArrayList<FieldDescription>()
-    if (pathPrefix.count { it == '.' } > MAXIMAL_TREE_DEPTH) {
+    if (remainingDepth < 0) {
         return fieldDescriptions
     }
     val fieldType = field.type
@@ -51,29 +63,45 @@ fun generateFieldDescriptions(field : PsiField, pathPrefix : String) : List<Fiel
     if (isListType(fieldType)) {
         fieldDescriptions.add(FieldDescription(pathPrefix, field.name, description))
         val parameterType = (fieldType as PsiClassReferenceType).parameters[0]!!
-        fieldDescriptions.addAll(generateFieldDescriptions(parameterType, pathPrefix + field.name + "[]."))
+        fieldDescriptions.addAll(generateFieldDescriptions(
+            parameterType,
+            pathPrefix + field.name + "[].",
+            remainingDepth - 1
+        ))
     } else {
         fieldDescriptions.add(FieldDescription(pathPrefix, field.name, description))
         if (!isBasicType(fieldType) && !isMapType(fieldType)) {
-            fieldDescriptions.addAll(generateFieldDescriptions(fieldType, pathPrefix + field.name + "."))
+            fieldDescriptions.addAll(generateFieldDescriptions(
+                fieldType,
+                pathPrefix + field.name + ".",
+                remainingDepth - 1
+            ))
         }
     } 
     return fieldDescriptions
 }
 
-fun generateFieldDescriptions(classType : PsiType, pathPrefix : String) : List<FieldDescription> {
+fun generateFieldDescriptions(classType: PsiType, pathPrefix: String, remainingDepth: Int) : List<FieldDescription> {
     val fieldDescriptions = ArrayList<FieldDescription>()
-    if (pathPrefix.count { it == '.' } > MAXIMAL_TREE_DEPTH) {
+    if (remainingDepth < 0) {
         return fieldDescriptions
     }
     
     if (isListType(classType)) {
         fieldDescriptions.add(FieldDescription(pathPrefix, "[]", ""))
         val parameterType = (classType as PsiClassReferenceType).parameters[0]
-        fieldDescriptions.addAll(generateFieldDescriptions(parameterType, "$pathPrefix[]."))
+        fieldDescriptions.addAll(generateFieldDescriptions(
+            parameterType,
+            "$pathPrefix[].",
+            remainingDepth - 1
+        ))
     } else if (!isBasicType(classType) && !isMapType(classType)) {
         for (field in PsiTypesUtil.getPsiClass(classType)?.fields!!) {
-            fieldDescriptions.addAll(generateFieldDescriptions(field, pathPrefix))
+            fieldDescriptions.addAll(generateFieldDescriptions(
+                field,
+                pathPrefix,
+                remainingDepth - 1
+            ))
         }
     }
     return fieldDescriptions
