@@ -430,7 +430,7 @@ class GenerateRestDocsTestAction : AnAction() {
         methodBodyBuilder.append("document")
         methodBodyBuilder.openParenthesis()
 
-        methodBodyBuilder.appendLine("\"${selectedMethod.name.camelToKebabCase()}\",")
+        methodBodyBuilder.append("\"${selectedMethod.name.camelToKebabCase()}\"")
         val documentationFields = listOf(
             generatePathParametersDocumentation(pathParameters),
             generateQueryParametersDocumentation(queryParameters),
@@ -439,6 +439,7 @@ class GenerateRestDocsTestAction : AnAction() {
         ).stream()
             .filter(String::isNotEmpty)
             .reduce { a, b -> "$a," + System.lineSeparator() + b }
+            .map { "," + System.lineSeparator() + it }
             .orElse("")
 
         methodBodyBuilder.append(documentationFields)
@@ -483,7 +484,7 @@ class GenerateRestDocsTestAction : AnAction() {
     private fun generateRequestObjectDocumentation(requestObjectType: PsiType?): String {
         val responseBuilder = StringBuilder()
         if (requestObjectType != null) {
-            responseBuilder.appendLine(generateRequestFieldDescriptions(requestObjectType))
+            responseBuilder.append(generateRequestFieldDescriptions(requestObjectType))
         }
         return responseBuilder.toString()
     }
@@ -491,7 +492,7 @@ class GenerateRestDocsTestAction : AnAction() {
     private fun generateResponseObjectDocumentation(responseObjectType: PsiType?): String {
         val responseBuilder = StringBuilder()
         if (responseObjectType != null) {
-            responseBuilder.appendLine(generateResponseFieldDescriptions(responseObjectType))
+            responseBuilder.append(generateResponseFieldDescriptions(responseObjectType))
         }
         return responseBuilder.toString()
     }
