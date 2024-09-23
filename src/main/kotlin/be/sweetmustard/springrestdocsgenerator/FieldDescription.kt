@@ -33,9 +33,12 @@ fun generateRequestFieldDescriptions(requestObjectType: PsiType?): String {
 }
 
 fun generateJsonRequestBody(requestObjectType: PsiType): String {
-    val tree = TreeNode("", generateClassTree(requestObjectType), ROOT)
+    val tree = generateTree(requestObjectType)
     return "\"\"\"" + System.lineSeparator() + buildJsonString(tree, 0) +  "\"\"\""
 }
+
+private fun generateTree(type: PsiType) =
+    TreeNode("", generateLeaves(type, MAXIMAL_TREE_DEPTH), ROOT)
 
 fun generateFieldDescriptions(field : PsiField, pathPrefix : String) : List<FieldDescription> {
     val fieldDescriptions = ArrayList<FieldDescription>()
@@ -100,37 +103,42 @@ fun buildFieldsDescriptionString(fieldDescriptions : List<FieldDescription>, htt
     }
 
     return descriptions.stream()
-        .reduce {s, t, -> s + System.lineSeparator() + t}
+        .reduce {s, t -> s + System.lineSeparator() + t}
         .orElse("")
 }
 
-fun generateClassTree(field : PsiField) : List<TreeNode> {
+fun generateLeaves(field: PsiField, remainingDepth: Int) : List<TreeNode> {
     val subNodes = ArrayList<TreeNode>()
+    if (remainingDepth < 0) {
+        return subNodes
+    }
 
     val fieldType = field.type
 
     if (isListType(fieldType)) {
         val parameterType = (fieldType as PsiClassReferenceType).parameters[0]!!
-        subNodes.add(TreeNode(field.name, generateClassTree(parameterType), NAMED_LIST))
+        subNodes.add(TreeNode(field.name, generateLeaves(parameterType, remainingDepth - 1), NAMED_LIST))
+    } else if (!isBasicType(fieldType)) {
+            subNodes.add(TreeNode(field.name, generateLeaves(fieldType, remainingDepth - 1), COMPOSITE_OBJECT))
     } else {
-        if (!isBasicType(fieldType)) {
-            subNodes.add(TreeNode(field.name, generateClassTree(fieldType), COMPOSITE_OBJECT))
-        } else {
             subNodes.add(TreeNode(field.name, emptyList(), SIMPLE_OBJECT))
-        }
+        
     }
     return subNodes
 }
 
-fun generateClassTree(classType : PsiType) : List<TreeNode> {
+fun generateLeaves(classType: PsiType, remainingDepth: Int) : List<TreeNode> {
     val subNodes = ArrayList<TreeNode>()
-
+    if (remainingDepth < 0) {
+        return subNodes
+    }
+    
     if (isListType(classType)) {
         val parameterType = (classType as PsiClassReferenceType).parameters[0]
-        subNodes.add(TreeNode("", generateClassTree(parameterType), UNNAMED_LIST))
+        subNodes.add(TreeNode("", generateLeaves(parameterType, remainingDepth - 1), UNNAMED_LIST))
     } else if (!isBasicType(classType)) {
         subNodes.addAll(PsiTypesUtil.getPsiClass(classType)?.fields!!.stream()
-            .map { generateClassTree(it) }
+            .map { generateLeaves(it, remainingDepth - 1) }
             .flatMap { it.stream() }
             .toList())
     }
