@@ -9,6 +9,8 @@ import com.intellij.psi.util.PsiTypesUtil
 import com.intellij.util.containers.stream
 import java.util.stream.Collectors
 
+const val MAXIMAL_TREE_DEPTH = 10
+
 fun generateResponseFieldDescriptions(responseObjectType: PsiType?): String {
     if (responseObjectType == null) {
         return ""
@@ -37,7 +39,9 @@ fun generateJsonRequestBody(requestObjectType: PsiType): String {
 
 fun generateFieldDescriptions(field : PsiField, pathPrefix : String) : List<FieldDescription> {
     val fieldDescriptions = ArrayList<FieldDescription>()
-    
+    if (pathPrefix.count { it == '.' } > MAXIMAL_TREE_DEPTH) {
+        return fieldDescriptions
+    }
     val fieldType = field.type
     val description = ""
 
@@ -56,6 +60,9 @@ fun generateFieldDescriptions(field : PsiField, pathPrefix : String) : List<Fiel
 
 fun generateFieldDescriptions(classType : PsiType, pathPrefix : String) : List<FieldDescription> {
     val fieldDescriptions = ArrayList<FieldDescription>()
+    if (pathPrefix.count { it == '.' } > MAXIMAL_TREE_DEPTH) {
+        return fieldDescriptions
+    }
     
     if (isListType(classType)) {
         fieldDescriptions.add(FieldDescription(pathPrefix, "[]", ""))
@@ -171,7 +178,6 @@ fun buildJsonPiece(subNodes : List<TreeNode>, indent: Int) : String {
         .reduce { a, b -> "$a ," + System.lineSeparator() + b }
         .orElse("")
 }
-
 val basicTypes = listOf("String", "Integer", "Boolean", "UUID", "Long", "Double").union(PsiTypes.primitiveTypes().stream().map { it.name }.toList()).plus(PsiTypes.voidType().name)
 
 private fun isBasicType(classType: PsiType) =
