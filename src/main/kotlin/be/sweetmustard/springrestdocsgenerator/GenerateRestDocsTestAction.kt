@@ -434,8 +434,8 @@ class GenerateRestDocsTestAction : AnAction() {
         val documentationFields = listOf(
             generatePathParametersDocumentation(pathParameters),
             generateQueryParametersDocumentation(queryParameters),
-            generateRequestObjectDocumentation(requestObjectType),
-            generateResponseObjectDocumentation(responseObjectType)
+            generateRequestFieldDescriptions(requestObjectType),
+            generateResponseFieldDescriptions(responseObjectType)
         ).stream()
             .filter(String::isNotEmpty)
             .reduce { a, b -> "$a," + System.lineSeparator() + b }
@@ -480,22 +480,6 @@ class GenerateRestDocsTestAction : AnAction() {
             .map { param -> "parameterWithName(\"${param.name}\").description(\"\")" }
             .reduce { a, b -> "$a," + System.lineSeparator() + b }
             .orElse("")
-
-    private fun generateRequestObjectDocumentation(requestObjectType: PsiType?): String {
-        val responseBuilder = StringBuilder()
-        if (requestObjectType != null) {
-            responseBuilder.append(generateRequestFieldDescriptions(requestObjectType))
-        }
-        return responseBuilder.toString()
-    }
-
-    private fun generateResponseObjectDocumentation(responseObjectType: PsiType?): String {
-        val responseBuilder = StringBuilder()
-        if (responseObjectType != null) {
-            responseBuilder.append(generateResponseFieldDescriptions(responseObjectType))
-        }
-        return responseBuilder.toString()
-    }
 
     private fun getRequestMappingOfParentalRestController(selectedMethod: PsiMethod): PsiAnnotation? {
         val requestMappingClassLevel =

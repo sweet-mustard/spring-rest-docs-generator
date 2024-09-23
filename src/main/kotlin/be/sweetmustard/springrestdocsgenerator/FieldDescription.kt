@@ -9,12 +9,18 @@ import com.intellij.psi.util.PsiTypesUtil
 import com.intellij.util.containers.stream
 import java.util.stream.Collectors
 
-fun generateResponseFieldDescriptions(responseObjectType: PsiType): String {
+fun generateResponseFieldDescriptions(responseObjectType: PsiType?): String {
+    if (responseObjectType == null) {
+        return ""
+    }
     val responseFieldDescriptions = generateFieldDescriptions(responseObjectType, "")
     return buildFieldsDescriptionString(responseFieldDescriptions, HttpObjectType.RESPONSE)
 }
 
-fun generateRequestFieldDescriptions(requestObjectType: PsiType): String {
+fun generateRequestFieldDescriptions(requestObjectType: PsiType?): String {
+    if (requestObjectType == null) {
+        return ""
+    }
     val requestFieldDescriptions = generateFieldDescriptions(requestObjectType, "")
     return buildFieldsDescriptionString(requestFieldDescriptions, HttpObjectType.REQUEST)
 }
