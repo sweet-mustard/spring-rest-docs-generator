@@ -13,8 +13,13 @@ fun generateResponseFieldDescriptions(responseObjectType: PsiType?): String {
     if (responseObjectType == null) {
         return ""
     }
-    val responseFieldDescriptions = generateFieldDescriptions(responseObjectType, "")
-    return buildFieldsDescriptionString(responseFieldDescriptions, HttpObjectType.RESPONSE)
+    if (responseObjectType.toString().contains("ResponseEntity")) {
+        val responseFieldDescriptions = generateFieldDescriptions((responseObjectType as PsiClassReferenceType).parameters[0], "")
+        return buildFieldsDescriptionString(responseFieldDescriptions, HttpObjectType.RESPONSE)
+    } else {
+        val responseFieldDescriptions = generateFieldDescriptions(responseObjectType, "")
+        return buildFieldsDescriptionString(responseFieldDescriptions, HttpObjectType.RESPONSE)
+    }
 }
 
 fun generateRequestFieldDescriptions(requestObjectType: PsiType?): String {

@@ -47,15 +47,21 @@ class GenerateRestDocsTestAction : AnAction() {
             selectedElement.parentOfType<PsiMethod>()
         }
 
-        if (selectedMethod == null || selectedMethod.annotations.stream().map { it.qualifiedName }
-                .noneMatch { it?.endsWith("Mapping") == true }) {
+        if (!canGenerateDocumentationTestForMethod(selectedMethod)) {
             HintManager.getInstance()
                 .showErrorHint(editor, "Cannot generate documentation test for selected element.")
             return
         }
 
-        showCreateOrJumpDialog(currentProject, selectedMethod, event)
+        showCreateOrJumpDialog(currentProject, selectedMethod!!, event)
     }
+
+    private fun canGenerateDocumentationTestForMethod(selectedMethod: PsiMethod?) =
+        selectedMethod != null &&
+                (selectedMethod.annotations.stream().map { it.qualifiedName }
+                            .anyMatch { it?.endsWith("Mapping") == true } ||
+                        selectedMethod.returnTypeElement?.type.toString().contains("ResponseEntity"))
+
 
     private fun showCreateOrJumpDialog(
         currentProject: Project,
@@ -463,14 +469,18 @@ class GenerateRestDocsTestAction : AnAction() {
 
     private fun generateQueryParametersDocumentation(queryParameters: List<PsiParameter>): String {
         if (queryParameters.isNotEmpty()) {
-            return "queryParameters(" + System.lineSeparator() + generateDocumentationForParameters(queryParameters) + System.lineSeparator() + ")"
+            return "queryParameters(" + System.lineSeparator() + generateDocumentationForParameters(
+                queryParameters
+            ) + System.lineSeparator() + ")"
         }
         return ""
     }
 
     private fun generatePathParametersDocumentation(pathParameters: List<PsiParameter>): String {
         if (pathParameters.isNotEmpty()) {
-            return "pathParameters(" + System.lineSeparator() + generateDocumentationForParameters(pathParameters) + System.lineSeparator() +")"
+            return "pathParameters(" + System.lineSeparator() + generateDocumentationForParameters(
+                pathParameters
+            ) + System.lineSeparator() + ")"
         }
         return ""
     }
