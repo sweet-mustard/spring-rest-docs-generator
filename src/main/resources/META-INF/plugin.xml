@@ -10,6 +10,13 @@
     <resource-bundle>messages.MyBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
+        <applicationService
+          serviceImplementation="be.sweetmustard.springrestdocsgenerator.SpringRestDocsGeneratorSettings"/>
+        <projectConfigurable
+          parentId="tools"
+          instance="be.sweetmustard.springrestdocsgenerator.SpringRestDocsGeneratorSettingsConfigurable"
+          id="be.sweetmustard.springrestdocsgenerator.SpringRestDocsGeneratorSettingsConfigurable"
+          displayName="Spring REST Docs Generator"/>
     </extensions>
 
     <actions>

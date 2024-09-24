@@ -235,7 +235,7 @@ class GenerateRestDocsTestAction : AnAction() {
 
             fileContentBuilder.append(packageStatement(restController))
             fileContentBuilder.append(importsForDocumentationTest())
-
+            
             val documentationTestFileName =
                 RestDocsHelper.getDocumentationTestFileName(restController)
 
@@ -254,7 +254,7 @@ class GenerateRestDocsTestAction : AnAction() {
                 )
 
             documentationTestFile.add(restDocumentationTestClass)
-
+            
             formatDocumentationTestFile(currentProject, documentationTestFile)
 
             val testSourceRootDirectory =
@@ -290,6 +290,10 @@ class GenerateRestDocsTestAction : AnAction() {
             elementFactory.createClass(classFileName.removeSuffix(".java"))
 
         PsiUtil.setModifierProperty(restDocumentationTestClass, PsiModifier.PACKAGE_LOCAL, true)
+        val state = SpringRestDocsGeneratorSettings.getInstance(restController.project).state
+        for (annotation in state.testAnnotations) {
+            restDocumentationTestClass.modifierList?.addAnnotation(annotation.replace("^@+".toRegex(), ""))
+        }
         restDocumentationTestClass.modifierList?.addAnnotation("WebMvcTest(${restController.name}.class)")
         restDocumentationTestClass.modifierList?.addAnnotation("AutoConfigureRestDocs")
         restDocumentationTestClass.modifierList?.addAnnotation("ExtendWith({RestDocumentationExtension.class})")
