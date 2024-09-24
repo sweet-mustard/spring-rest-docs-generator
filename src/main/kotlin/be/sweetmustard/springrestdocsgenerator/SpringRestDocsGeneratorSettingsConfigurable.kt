@@ -29,19 +29,24 @@ class SpringRestDocsGeneratorSettingsConfigurable(private val project : Project)
     override fun isModified(): Boolean {
         val state: SpringRestDocsGeneratorState =
             Objects.requireNonNull(SpringRestDocsGeneratorSettings.getInstance(project).state)
-        return !(mySettingsComponent?.getTestAnnotationLabels()?.equals(state.testAnnotations)!!)
+        return !(mySettingsComponent?.getRestControllerAnnotations()?.equals(state.restControllerDocumentationTestClassAnnotations)!! &&
+                mySettingsComponent?.getMethodAnnotations()?.equals(state.restControllerDocumentationTestMethodAnnotations)!!
+                )
     }
 
     override fun apply() {
         val state: SpringRestDocsGeneratorState =
             Objects.requireNonNull(SpringRestDocsGeneratorSettings.getInstance(project).state)
-        state.testAnnotations = mySettingsComponent?.getTestAnnotationLabels()!!
+        state.restControllerDocumentationTestClassAnnotations = mySettingsComponent?.getRestControllerAnnotations()!!
+        state.restControllerDocumentationTestMethodAnnotations = mySettingsComponent?.getMethodAnnotations()!!
     }
 
     override fun reset() {
         val state: SpringRestDocsGeneratorState =
             Objects.requireNonNull(SpringRestDocsGeneratorSettings.getInstance(project).state)
-        mySettingsComponent?.setTestAnnotationLabels(state.testAnnotations)
+        mySettingsComponent?.setRestControllerAnnotations(state.restControllerDocumentationTestClassAnnotations)
+        mySettingsComponent?.setMethodAnnotations(state.restControllerDocumentationTestMethodAnnotations)
+        
     }
 
     override fun disposeUIResources() {

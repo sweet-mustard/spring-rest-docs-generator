@@ -205,6 +205,11 @@ class GenerateRestDocsTestAction : AnAction() {
 
             PsiUtil.addException(documentationTestMethod, "Exception")
             documentationTestMethod.modifierList.addAnnotation("Test")
+            val state = SpringRestDocsGeneratorSettings.getInstance(selectedMethod.project).state
+            for (annotation in state.restControllerDocumentationTestMethodAnnotations) {
+                documentationTestMethod.modifierList.addAnnotation(annotation)
+            }
+            
             PsiUtil.setModifierProperty(documentationTestMethod, PsiModifier.PACKAGE_LOCAL, true)
 
             documentationTestMethod.body!!.add(
@@ -291,7 +296,7 @@ class GenerateRestDocsTestAction : AnAction() {
 
         PsiUtil.setModifierProperty(restDocumentationTestClass, PsiModifier.PACKAGE_LOCAL, true)
         val state = SpringRestDocsGeneratorSettings.getInstance(restController.project).state
-        for (annotation in state.testAnnotations) {
+        for (annotation in state.restControllerDocumentationTestClassAnnotations) {
             restDocumentationTestClass.modifierList?.addAnnotation(annotation.replace("^@+".toRegex(), ""))
         }
         restDocumentationTestClass.modifierList?.addAnnotation("WebMvcTest(${restController.name}.class)")

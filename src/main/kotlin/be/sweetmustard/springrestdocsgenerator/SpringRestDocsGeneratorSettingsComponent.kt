@@ -1,32 +1,37 @@
 package be.sweetmustard.springrestdocsgenerator
 
-import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBScrollPane
-import com.intellij.ui.components.JBTextArea
 import com.intellij.util.ui.FormBuilder
-import javax.swing.JComponent
-import javax.swing.JPanel
+import javax.swing.*
 
 
 class SpringRestDocsGeneratorSettingsComponent() {
     private var myMainPanel: JPanel? = null
-    private val testAnnotations = JBTextArea()
+    private val additionalRestControllerDocumentationTestAnnotations = JTextArea(5, 30)
+    private val additionalTestMethodAnnotations = JTextArea(5, 30)
     
     
     init {
-        testAnnotations.isEditable = true
-        testAnnotations.wrapStyleWord = true
-        testAnnotations.lineWrap =true
-        val testAnnotationsScrollPane = JBScrollPane(testAnnotations)
-        val testAnnotationsLabel = JBLabel("Annotations for RestControllerDocumentationTest classes")
+        additionalRestControllerDocumentationTestAnnotations.isEditable = true
+        additionalRestControllerDocumentationTestAnnotations.wrapStyleWord = true
+        additionalRestControllerDocumentationTestAnnotations.lineWrap =true
+        val additionalRestControllerDocumentationTestAnnotationsScrollPane = JScrollPane(additionalRestControllerDocumentationTestAnnotations, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED)
+        val additionalRestControllerDocumentationTestAnnotationsLabel = JLabel("Annotations for RestControllerDocumentationTest classes")
+
+        additionalTestMethodAnnotations.isEditable = true
+        additionalTestMethodAnnotations.wrapStyleWord = true
+        additionalTestMethodAnnotations.lineWrap =true
+        val additionalTestMethodAnnotationsScrollPane = JScrollPane(additionalTestMethodAnnotations, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED)
+        val additionalTestMethodAnnotationsLabel = JLabel("Annotations for RestControllerDocumentationTest methods")
+        
         myMainPanel = FormBuilder.createFormBuilder()
-            .addLabeledComponent(testAnnotationsLabel, testAnnotationsScrollPane, 0, true)
+            .addLabeledComponent(additionalRestControllerDocumentationTestAnnotationsLabel, additionalRestControllerDocumentationTestAnnotationsScrollPane, 10, true)
             .addTooltip("Semicolon- or enter-separated list")
-            .addComponentFillVertically(JPanel(), 0)
+            .addLabeledComponent(additionalTestMethodAnnotationsLabel, additionalTestMethodAnnotationsScrollPane, 10, true)
+            .addTooltip("Semicolon- or enter-separated list")
             .panel
         
-        
-        testAnnotations.font = myMainPanel!!.font
+        additionalRestControllerDocumentationTestAnnotations.font = myMainPanel!!.font
+        additionalTestMethodAnnotations.font = myMainPanel!!.font
     }
 
     fun getPanel(): JPanel? {
@@ -34,19 +39,24 @@ class SpringRestDocsGeneratorSettingsComponent() {
     }
 
     fun getPreferredFocusedComponent(): JComponent {
-        return testAnnotations
+        return additionalRestControllerDocumentationTestAnnotations
     }
     
-    fun getTestAnnotationLabels(): List<String> {
-        if (testAnnotations.text.isEmpty()) {
-            return emptyList()
-        }
-        return testAnnotations.text.split("[;\n]+".toRegex()).stream().filter {it.isNotBlank()}.toList()
+    fun getRestControllerAnnotations(): List<String> {
+        return additionalRestControllerDocumentationTestAnnotations.text.split("[;\n]+".toRegex()).stream().filter {it.isNotBlank()}.toList()
     }
     
-    fun setTestAnnotationLabels(newTestAnnotations : List<String>) {
-        testAnnotations.text = newTestAnnotations.joinToString(";") { it }
+    fun setRestControllerAnnotations(newRestControllerAnnotations : List<String>) {
+        additionalRestControllerDocumentationTestAnnotations.text = newRestControllerAnnotations.joinToString(";") { it }
     }
     
+    fun getMethodAnnotations(): List<String> {
+        return additionalTestMethodAnnotations.text.split("[;\n]+".toRegex()).stream().filter {it.isNotBlank()}.toList()
+    }
+
+    fun setMethodAnnotations(newMethodAnnotations : List<String>) {
+        additionalTestMethodAnnotations.text = newMethodAnnotations.joinToString(";") { it }
+    }
+
 
 }
