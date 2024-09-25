@@ -3,8 +3,13 @@ package be.sweetmustard.springrestdocsgenerator
 import com.intellij.ui.IdeBorderFactory
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBRadioButton
+import com.intellij.ui.components.JBTextArea
+import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.FormBuilder
+import java.awt.FlowLayout
 import java.awt.GridLayout
+import java.awt.event.ItemEvent
 import javax.swing.*
 
 
@@ -13,20 +18,61 @@ class SpringRestDocsGeneratorSettingsComponent() {
     private val additionalRestControllerDocumentationTestAnnotations : JTextArea
     private val additionalTestMethodAnnotations : JTextArea
     private val mockMvcAdditions : JTextArea
+    private val useDefaultClassAnnotation : JBRadioButton
+    private val useCustomClassAnnotation : JBRadioButton
+    private val customClassAnnotationText : JBTextField
     
     
     init {
         additionalRestControllerDocumentationTestAnnotations = createTextArea()
         val additionalRestControllerDocumentationTestAnnotationsScrollPane = 
-            createLabelledScrollPaneAroundTextArea(additionalRestControllerDocumentationTestAnnotations, "Documentation classes", "Semicolon- or enter-separated list")
+            createLabelledScrollPaneAroundTextArea(additionalRestControllerDocumentationTestAnnotations, "Additional", "Semicolon- or enter-separated list")
         
         additionalTestMethodAnnotations = createTextArea()
         val additionalTestMethodAnnotationsScrollPane = 
             createLabelledScrollPaneAroundTextArea(additionalTestMethodAnnotations, "Test methods", "Semicolon- or enter-separated list")
 
+        val classAnnotations = JPanel(GridLayout(2, 1))
+        val mainClassAnnotation = JPanel(GridLayout(2, 1))
+        useDefaultClassAnnotation = JBRadioButton("Default:")
+        val defaultClassAnnotationText = JBTextArea(
+            listOf(
+                "@ExtendWith({RestDocumentationExtension.class})",
+                "@AutoConfigureRestDocs",
+                "@WebMvcTest({{rest-controller-name}.class})"
+            ).joinToString(System.lineSeparator())
+        )
+        val defaultClassAnnotation = JPanel(FlowLayout(FlowLayout.LEADING))
+        defaultClassAnnotation.add(useDefaultClassAnnotation)
+        defaultClassAnnotation.add(defaultClassAnnotationText)
+        
+        
+        useCustomClassAnnotation = JBRadioButton("Custom:")
+        customClassAnnotationText = JBTextField(40)
+        val customClassAnnotation = JPanel(FlowLayout(FlowLayout.LEADING))
+        customClassAnnotation.add(useCustomClassAnnotation)
+        customClassAnnotation.add(customClassAnnotationText)
+        
+        mainClassAnnotation.add(defaultClassAnnotation)
+        mainClassAnnotation.add(customClassAnnotation)
+        useDefaultClassAnnotation.addItemListener {
+            useCustomClassAnnotation.isSelected = it.stateChange != ItemEvent.SELECTED
+            customClassAnnotationText.isEnabled = it.stateChange != ItemEvent.SELECTED
+        }
+
+        useCustomClassAnnotation.addItemListener {
+            useDefaultClassAnnotation.isSelected = (it.stateChange != ItemEvent.SELECTED)
+        }
+        
+        classAnnotations.add(FormBuilder.createFormBuilder()
+            .addLabeledComponent(JBLabel("Class"), mainClassAnnotation, true)
+            .addComponentFillVertically(additionalRestControllerDocumentationTestAnnotationsScrollPane, 10)
+            .panel
+        )
+
         val annotations = JPanel(GridLayout(1, 2, 20, 0))
         annotations.border = IdeBorderFactory.createTitledBorder("Annotations")
-        annotations.add(additionalRestControllerDocumentationTestAnnotationsScrollPane)
+        annotations.add(classAnnotations)
         annotations.add(additionalTestMethodAnnotationsScrollPane)
         
         mockMvcAdditions = createTextArea()
@@ -99,6 +145,23 @@ class SpringRestDocsGeneratorSettingsComponent() {
     
     fun setMockMvcAdditions(newMockMvcAdditions : String) {
         mockMvcAdditions.text = newMockMvcAdditions
+    }
+    
+    fun setDefaultAnnotationUsage(usage: Boolean) {
+        useDefaultClassAnnotation.isSelected = usage
+        useCustomClassAnnotation.isSelected = !usage
+    }
+    
+    fun getDefaultAnnotationUsage(): Boolean {
+        return useDefaultClassAnnotation.isSelected
+    }
+
+    fun getCustomClassAnnotation(): String {
+        return customClassAnnotationText.text
+    }
+    
+    fun setCustomClassAnnotation(newAnnotation: String) {
+        customClassAnnotationText.text = newAnnotation
     }
 
 

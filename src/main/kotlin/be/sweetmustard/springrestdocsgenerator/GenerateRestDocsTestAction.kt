@@ -239,7 +239,7 @@ class GenerateRestDocsTestAction : AnAction() {
             val fileContentBuilder = StringBuilder()
 
             fileContentBuilder.append(packageStatement(restController))
-            fileContentBuilder.append(importsForDocumentationTest())
+            fileContentBuilder.append(importsForDocumentationTest(currentProject))
             
             val documentationTestFileName =
                 RestDocsHelper.getDocumentationTestFileName(restController)
@@ -299,16 +299,22 @@ class GenerateRestDocsTestAction : AnAction() {
         for (annotation in state.restControllerDocumentationTestClassAnnotations) {
             restDocumentationTestClass.modifierList?.addAnnotation(annotation.replace("^@+".toRegex(), ""))
         }
-        restDocumentationTestClass.modifierList?.addAnnotation("WebMvcTest(${restController.name}.class)")
-        restDocumentationTestClass.modifierList?.addAnnotation("AutoConfigureRestDocs")
-        restDocumentationTestClass.modifierList?.addAnnotation("ExtendWith({RestDocumentationExtension.class})")
+        if (state.useDefaultClassAnnotation) {
+            restDocumentationTestClass.modifierList?.addAnnotation("WebMvcTest(${restController.name}.class)")
+            restDocumentationTestClass.modifierList?.addAnnotation("AutoConfigureRestDocs")
+            restDocumentationTestClass.modifierList?.addAnnotation("ExtendWith({RestDocumentationExtension.class})")
+        } else {
+            restDocumentationTestClass.modifierList?.addAnnotation(state.customClassAnnotation.replace("{rest-controller-name}", restController.name!!).replace("^@+".toRegex(), ""))
+        }
 
         return restDocumentationTestClass
     }
 
-    private fun importsForDocumentationTest(): String {
+    private fun importsForDocumentationTest(project: Project): String {
+        val state = SpringRestDocsGeneratorSettings.getInstance(project).state
+        
         val builder = StringBuilder()
-
+        
         builder.appendLine()
         builder.appendLine("import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;")
         builder.appendLine("import static org.springframework.restdocs.payload.PayloadDocumentation.*;")
@@ -318,12 +324,14 @@ class GenerateRestDocsTestAction : AnAction() {
         builder.appendLine()
         builder.appendLine("import org.junit.jupiter.api.Test;")
         builder.appendLine()
-        builder.appendLine("import org.junit.jupiter.api.extension.ExtendWith;")
-        builder.appendLine("import org.springframework.beans.factory.annotation.Autowired;")
-        builder.appendLine("import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs;")
-        builder.appendLine("import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;")
         builder.appendLine("import org.springframework.http.MediaType;")
-        builder.appendLine("import org.springframework.restdocs.RestDocumentationExtension;")
+        builder.appendLine("import org.springframework.beans.factory.annotation.Autowired;")
+        if (state.useDefaultClassAnnotation) {
+            builder.appendLine("import org.junit.jupiter.api.extension.ExtendWith;")
+            builder.appendLine("import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs;")
+            builder.appendLine("import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;")
+            builder.appendLine("import org.springframework.restdocs.RestDocumentationExtension;")
+        }
         builder.appendLine()
 
         return builder.toString()
