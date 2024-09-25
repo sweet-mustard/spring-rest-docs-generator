@@ -1,0 +1,148 @@
+package be.sweetmustard.springrestdocsgenerator
+
+import com.intellij.ide.highlighter.JavaFileType
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.*
+import com.intellij.psi.codeStyle.CodeStyleManager
+import com.intellij.psi.util.PsiUtil
+
+class TestFileGenerator {
+    internal fun createOrGetDocumentationTestFile(
+        restController: PsiClass,
+        currentProject: Project,
+        testSourceRoot: VirtualFile,
+        elementFactory: PsiElementFactory
+    ): PsiFile {
+        var documentationTestFile = RestDocsHelper.getCorrespondingDocumentationTestFile(
+            testSourceRoot,
+            restController
+        )
+        if (documentationTestFile == null) {
+
+            val fileContentBuilder = StringBuilder()
+
+            fileContentBuilder.append(packageStatement(restController))
+            fileContentBuilder.append(importsForDocumentationTestFile(currentProject))
+
+            val documentationTestFileName =
+                RestDocsHelper.getDocumentationTestFileName(restController)
+
+            documentationTestFile = PsiFileFactory.getInstance(currentProject)
+                .createFileFromText(
+                    documentationTestFileName,
+                    JavaFileType.INSTANCE,
+                    fileContentBuilder.toString()
+                )
+
+            val restDocumentationTestClass =
+                generateRestDocumentationTestClass(
+                    elementFactory,
+                    documentationTestFileName,
+                    restController
+                )
+
+            documentationTestFile.add(restDocumentationTestClass)
+
+            formatDocumentationTestFile(currentProject, documentationTestFile)
+
+            val testSourceRootDirectory =
+                PsiManager.getInstance(currentProject).findDirectory(testSourceRoot)!!
+
+            val directory =
+                createPackageDirectoriesIfNeeded(testSourceRootDirectory, restController)
+            documentationTestFile = directory.add(documentationTestFile) as PsiFile
+        }
+
+        return documentationTestFile
+    }
+
+    private fun generateRestDocumentationTestClass(
+        elementFactory: PsiElementFactory,
+        classFileName: String,
+        restController: PsiClass
+    ): PsiClass {
+        val restDocumentationTestClass =
+            elementFactory.createClass(classFileName.removeSuffix(".java"))
+
+        PsiUtil.setModifierProperty(restDocumentationTestClass, PsiModifier.PACKAGE_LOCAL, true)
+        val state = SpringRestDocsGeneratorSettings.getInstance(restController.project).state
+        for (annotation in state.restControllerDocumentationTestClassAnnotations) {
+            restDocumentationTestClass.modifierList?.addAnnotation(annotation.replace("^@+".toRegex(), ""))
+        }
+        if (state.useDefaultClassAnnotation) {
+            restDocumentationTestClass.modifierList?.addAnnotation("WebMvcTest(${restController.name}.class)")
+            restDocumentationTestClass.modifierList?.addAnnotation("AutoConfigureRestDocs")
+            restDocumentationTestClass.modifierList?.addAnnotation("ExtendWith({RestDocumentationExtension.class})")
+        } else {
+            restDocumentationTestClass.modifierList?.addAnnotation(state.customClassAnnotation.replace("{rest-controller-name}", restController.name!!).replace("^@+".toRegex(), ""))
+        }
+
+        return restDocumentationTestClass
+    }
+
+    private fun packageStatement(
+        restController: PsiClass,
+    ): String {
+        val packageName = RestDocsHelper.getPackageName(restController)
+
+        val builder = StringBuilder()
+
+        if (packageName.isNotEmpty()) {
+            builder.appendLine("package $packageName;")
+        }
+        return builder.toString()
+    }
+
+    private fun importsForDocumentationTestFile(project: Project): String {
+        val state = SpringRestDocsGeneratorSettings.getInstance(project).state
+
+        with(StringBuilder()) {
+            appendLine()
+            appendLine("import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;")
+            appendLine("import static org.springframework.restdocs.payload.PayloadDocumentation.*;")
+            appendLine("import static org.springframework.restdocs.request.RequestDocumentation.*;")
+            appendLine("import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;")
+            appendLine("import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;")
+            appendLine()
+            appendLine("import org.junit.jupiter.api.Test;")
+            appendLine()
+            appendLine("import org.springframework.http.MediaType;")
+            appendLine("import org.springframework.beans.factory.annotation.Autowired;")
+            if (state.useDefaultClassAnnotation) {
+                appendLine("import org.junit.jupiter.api.extension.ExtendWith;")
+                appendLine("import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs;")
+                appendLine("import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;")
+                appendLine("import org.springframework.restdocs.RestDocumentationExtension;")
+            }
+            appendLine()
+            return toString()
+        }
+
+    }
+
+    private fun formatDocumentationTestFile(
+        currentProject: Project,
+        documentationTestFile: PsiFile
+    ) {
+        val codeStyleManager = CodeStyleManager.getInstance(currentProject)
+        codeStyleManager.reformat(documentationTestFile)
+    }
+
+    private fun createPackageDirectoriesIfNeeded(
+        testSourceRootDirectory: PsiDirectory,
+        selectedClass: PsiClass
+    ): PsiDirectory {
+        val packageName = RestDocsHelper.getPackageName(selectedClass)
+        var directory = testSourceRootDirectory
+        val packageNameParts = packageName.split(".").toList()
+        for (packageNamePart in packageNameParts) {
+            var subdirectory = directory.findSubdirectory(packageNamePart)
+            if (subdirectory == null) {
+                subdirectory = directory.createSubdirectory(packageNamePart)
+            }
+            directory = subdirectory
+        }
+        return directory
+    }
+}
