@@ -93,12 +93,12 @@ class SpringRestDocsGeneratorSettingsComponent() {
         additionalTestMethodAnnotations.text = newMethodAnnotations.joinToString(System.lineSeparator()) { it }
     }
     
-    fun getMockMvcAdditions() : List<String> {
-        return mockMvcAdditions.text.split("[;\n]+".toRegex()).stream().filter {it.isNotBlank()}.toList()
+    fun getMockMvcAdditions() : String {
+        return mockMvcAdditions.text
     }
     
-    fun setMockMvcAdditions(newMockMvcAdditions : List<String>) {
-        mockMvcAdditions.text = newMockMvcAdditions.joinToString(System.lineSeparator()) { it }
+    fun setMockMvcAdditions(newMockMvcAdditions : String) {
+        mockMvcAdditions.text = newMockMvcAdditions
     }
 
 

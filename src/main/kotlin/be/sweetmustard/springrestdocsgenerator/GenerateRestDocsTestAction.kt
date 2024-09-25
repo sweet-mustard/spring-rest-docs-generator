@@ -435,11 +435,7 @@ class GenerateRestDocsTestAction : AnAction() {
             methodBodyBuilder.closeParenthesis()
         }
         val state = SpringRestDocsGeneratorSettings.getInstance(selectedMethod.project).state
-        methodBodyBuilder.appendLine(
-            state.mockMvcAdditions.stream()
-                .reduce { a, b -> a + System.lineSeparator() + b }
-                .orElse("")
-        )
+        methodBodyBuilder.appendLine(state.mockMvcAdditions)
         
         methodBodyBuilder.closeParenthesis()
         methodBodyBuilder.appendLine()
