@@ -1,4 +1,4 @@
-package be.sweetmustard.springrestdocsgenerator
+package be.sweetmustard.springrestdocsgenerator.settings
 
 import com.intellij.ui.IdeBorderFactory
 import com.intellij.ui.JBColor

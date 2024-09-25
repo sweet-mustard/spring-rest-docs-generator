@@ -11,11 +11,11 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <applicationService
-          serviceImplementation="be.sweetmustard.springrestdocsgenerator.SpringRestDocsGeneratorSettings"/>
+          serviceImplementation="be.sweetmustard.springrestdocsgenerator.settings.SpringRestDocsGeneratorSettings"/>
         <projectConfigurable
           parentId="tools"
-          instance="be.sweetmustard.springrestdocsgenerator.SpringRestDocsGeneratorSettingsConfigurable"
-          id="be.sweetmustard.springrestdocsgenerator.SpringRestDocsGeneratorSettingsConfigurable"
+          instance="be.sweetmustard.springrestdocsgenerator.settings.SpringRestDocsGeneratorSettingsConfigurable"
+          id="be.sweetmustard.springrestdocsgenerator.settings.SpringRestDocsGeneratorSettingsConfigurable"
           displayName="Spring REST Docs Generator"/>
     </extensions>
 

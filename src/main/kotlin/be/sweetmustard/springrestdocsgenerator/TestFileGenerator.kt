@@ -1,5 +1,6 @@
 package be.sweetmustard.springrestdocsgenerator
 
+import be.sweetmustard.springrestdocsgenerator.settings.SpringRestDocsGeneratorState
 import com.intellij.ide.highlighter.JavaFileType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile

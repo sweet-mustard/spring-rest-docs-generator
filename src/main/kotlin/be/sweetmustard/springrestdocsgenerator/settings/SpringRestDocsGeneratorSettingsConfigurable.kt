@@ -1,4 +1,4 @@
-package be.sweetmustard.springrestdocsgenerator
+package be.sweetmustard.springrestdocsgenerator.settings
 
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.project.Project

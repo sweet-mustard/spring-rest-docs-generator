@@ -1,4 +1,4 @@
-package be.sweetmustard.springrestdocsgenerator
+package be.sweetmustard.springrestdocsgenerator.settings
 
 class SpringRestDocsGeneratorState {
     var restControllerDocumentationTestClassAnnotations: List<String> = ArrayList()
