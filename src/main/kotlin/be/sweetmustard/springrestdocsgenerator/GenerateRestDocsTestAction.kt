@@ -33,6 +33,7 @@ class GenerateRestDocsTestAction : AnAction() {
     override fun actionPerformed(event: AnActionEvent) {
         val selectedElement: PsiElement? = event.getData(CommonDataKeys.PSI_ELEMENT)
         val currentProject = event.project!!
+        val projectState = SpringRestDocsGeneratorSettings.getInstance(currentProject).state
         val editor = FileEditorManager.getInstance(currentProject).selectedTextEditor!!
 
         if (selectedElement == null) {
@@ -53,7 +54,12 @@ class GenerateRestDocsTestAction : AnAction() {
             return
         }
 
-        showCreateOrJumpDialog(currentProject, selectedMethod!!, event)
+        showCreateOrJumpDialog(
+            currentProject,
+            selectedMethod!!,
+            event,
+            projectState
+        )
     }
 
     private fun canGenerateDocumentationTestForMethod(selectedMethod: PsiMethod?) =
@@ -65,7 +71,8 @@ class GenerateRestDocsTestAction : AnAction() {
     private fun showCreateOrJumpDialog(
         currentProject: Project,
         selectedMethod: PsiMethod,
-        event: AnActionEvent
+        event: AnActionEvent,
+        projectState: SpringRestDocsGeneratorState
     ) {
         val documentationTest =
             RestDocsHelper.getDocumentationTestForMethod(selectedMethod)
@@ -104,7 +111,8 @@ class GenerateRestDocsTestAction : AnAction() {
                                 generateRestDocumentationTest(
                                     selectedMethod,
                                     currentProject,
-                                    testSourceRoot
+                                    testSourceRoot,
+                                    projectState
                                 )
                             }
                         )
@@ -159,7 +167,8 @@ class GenerateRestDocsTestAction : AnAction() {
     private fun generateRestDocumentationTest(
         selectedMethod: PsiMethod,
         currentProject: Project,
-        testSourceRoot: VirtualFile
+        testSourceRoot: VirtualFile,
+        projectState: SpringRestDocsGeneratorState
     ) {
         val elementFactory = JavaPsiFacade.getInstance(currentProject).elementFactory
 
@@ -169,7 +178,8 @@ class GenerateRestDocsTestAction : AnAction() {
             restController,
             currentProject,
             testSourceRoot,
-            elementFactory
+            elementFactory,
+            projectState
         )
 
         val documentationTestClass = documentationTestFile.childrenOfType<PsiClass>()[0]
@@ -180,7 +190,8 @@ class GenerateRestDocsTestAction : AnAction() {
             testMethodGenerator.getOrCreateDocumentationTestMethod(
                 selectedMethod,
                 documentationTestClass,
-                elementFactory
+                elementFactory,
+                projectState
             )
 
         documentationTestMethod.navigate(true)

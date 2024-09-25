@@ -13,7 +13,8 @@ class TestMethodGenerator {
     internal fun getOrCreateDocumentationTestMethod(
         selectedMethod: PsiMethod,
         documentationTestClass: PsiClass,
-        elementFactory: PsiElementFactory
+        elementFactory: PsiElementFactory,
+        projectState: SpringRestDocsGeneratorState
     ): PsiMethod {
         val documentationTestName = selectedMethod.name + "Example"
 
@@ -27,8 +28,7 @@ class TestMethodGenerator {
 
             PsiUtil.addException(documentationTestMethod, "Exception")
             documentationTestMethod.modifierList.addAnnotation("Test")
-            val state = SpringRestDocsGeneratorSettings.getInstance(selectedMethod.project).state
-            for (annotation in state.restControllerDocumentationTestMethodAnnotations) {
+            for (annotation in projectState.restControllerDocumentationTestMethodAnnotations) {
                 documentationTestMethod.modifierList.addAnnotation(annotation)
             }
 
@@ -36,7 +36,10 @@ class TestMethodGenerator {
 
             documentationTestMethod.body!!.add(
                 elementFactory.createStatementFromText(
-                    generateMethodBody(selectedMethod),
+                    generateMethodBody(
+                        selectedMethod,
+                        projectState
+                    ),
                     documentationTestMethod
                 )
             )
@@ -60,7 +63,10 @@ class TestMethodGenerator {
         }
     }
     
-    private fun generateMethodBody(selectedMethod: PsiMethod): String {
+    private fun generateMethodBody(
+        selectedMethod: PsiMethod,
+        projectState: SpringRestDocsGeneratorState
+    ): String {
         val requestMappingOfMethod = getRequestMappingOfMethod(selectedMethod)
 
         val requestMappingOfClass =
@@ -143,8 +149,7 @@ class TestMethodGenerator {
             methodBodyBuilder.append(requestObjectType?.let { generateJsonRequestBody(it) })
             methodBodyBuilder.closeParenthesis()
         }
-        val state = SpringRestDocsGeneratorSettings.getInstance(selectedMethod.project).state
-        methodBodyBuilder.appendLine(state.mockMvcAdditions)
+        methodBodyBuilder.appendLine(projectState.mockMvcAdditions)
 
         methodBodyBuilder.closeParenthesis()
         methodBodyBuilder.appendLine()

@@ -12,7 +12,8 @@ class TestFileGenerator {
         restController: PsiClass,
         currentProject: Project,
         testSourceRoot: VirtualFile,
-        elementFactory: PsiElementFactory
+        elementFactory: PsiElementFactory,
+        projectState: SpringRestDocsGeneratorState
     ): PsiFile {
         var documentationTestFile = RestDocsHelper.getCorrespondingDocumentationTestFile(
             testSourceRoot,
@@ -23,7 +24,7 @@ class TestFileGenerator {
             val fileContentBuilder = StringBuilder()
 
             fileContentBuilder.append(packageStatement(restController))
-            fileContentBuilder.append(importsForDocumentationTestFile(currentProject))
+            fileContentBuilder.append(importsForDocumentationTestFile(projectState))
 
             val documentationTestFileName =
                 RestDocsHelper.getDocumentationTestFileName(restController)
@@ -39,7 +40,8 @@ class TestFileGenerator {
                 generateRestDocumentationTestClass(
                     elementFactory,
                     documentationTestFileName,
-                    restController
+                    restController,
+                    projectState
                 )
 
             documentationTestFile.add(restDocumentationTestClass)
@@ -60,22 +62,22 @@ class TestFileGenerator {
     private fun generateRestDocumentationTestClass(
         elementFactory: PsiElementFactory,
         classFileName: String,
-        restController: PsiClass
+        restController: PsiClass,
+        projectState: SpringRestDocsGeneratorState
     ): PsiClass {
         val restDocumentationTestClass =
             elementFactory.createClass(classFileName.removeSuffix(".java"))
 
         PsiUtil.setModifierProperty(restDocumentationTestClass, PsiModifier.PACKAGE_LOCAL, true)
-        val state = SpringRestDocsGeneratorSettings.getInstance(restController.project).state
-        for (annotation in state.restControllerDocumentationTestClassAnnotations) {
+        for (annotation in projectState.restControllerDocumentationTestClassAnnotations) {
             restDocumentationTestClass.modifierList?.addAnnotation(annotation.replace("^@+".toRegex(), ""))
         }
-        if (state.useDefaultClassAnnotation) {
+        if (projectState.useDefaultClassAnnotation) {
             restDocumentationTestClass.modifierList?.addAnnotation("WebMvcTest(${restController.name}.class)")
             restDocumentationTestClass.modifierList?.addAnnotation("AutoConfigureRestDocs")
             restDocumentationTestClass.modifierList?.addAnnotation("ExtendWith({RestDocumentationExtension.class})")
         } else {
-            restDocumentationTestClass.modifierList?.addAnnotation(state.customClassAnnotation.replace("{rest-controller-name}", restController.name!!).replace("^@+".toRegex(), ""))
+            restDocumentationTestClass.modifierList?.addAnnotation(projectState.customClassAnnotation.replace("{rest-controller-name}", restController.name!!).replace("^@+".toRegex(), ""))
         }
 
         return restDocumentationTestClass
@@ -94,8 +96,7 @@ class TestFileGenerator {
         return builder.toString()
     }
 
-    private fun importsForDocumentationTestFile(project: Project): String {
-        val state = SpringRestDocsGeneratorSettings.getInstance(project).state
+    private fun importsForDocumentationTestFile(state: SpringRestDocsGeneratorState): String {
 
         with(StringBuilder()) {
             appendLine()
