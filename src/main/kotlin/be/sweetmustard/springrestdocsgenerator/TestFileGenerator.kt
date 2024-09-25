@@ -70,14 +70,20 @@ class TestFileGenerator {
 
         PsiUtil.setModifierProperty(restDocumentationTestClass, PsiModifier.PACKAGE_LOCAL, true)
         for (annotation in projectState.restControllerDocumentationTestClassAnnotations) {
-            restDocumentationTestClass.modifierList?.addAnnotation(annotation.replace("^@+".toRegex(), ""))
+            restDocumentationTestClass.modifierList?.addAnnotation(
+                annotation.replace("^@+".toRegex(), "")
+            )
         }
         if (projectState.useDefaultClassAnnotation) {
             restDocumentationTestClass.modifierList?.addAnnotation("WebMvcTest(${restController.name}.class)")
             restDocumentationTestClass.modifierList?.addAnnotation("AutoConfigureRestDocs")
             restDocumentationTestClass.modifierList?.addAnnotation("ExtendWith({RestDocumentationExtension.class})")
         } else {
-            restDocumentationTestClass.modifierList?.addAnnotation(projectState.customClassAnnotation.replace("{rest-controller-name}", restController.name!!).replace("^@+".toRegex(), ""))
+            restDocumentationTestClass.modifierList?.addAnnotation(
+                projectState.customClassAnnotation
+                    .replace("{rest-controller-name}", restController.name!!)
+                    .replace("^@+".toRegex(), "")
+            )
         }
 
         return restDocumentationTestClass

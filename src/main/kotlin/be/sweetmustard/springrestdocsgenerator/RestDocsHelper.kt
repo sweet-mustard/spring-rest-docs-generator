@@ -26,7 +26,8 @@ class RestDocsHelper {
             var documentationTestFile: PsiFile? = null
             if (documentationTestVirtualFile != null) {
                 documentationTestFile =
-                    PsiManager.getInstance(productionClass.project).findFile(documentationTestVirtualFile)
+                    PsiManager.getInstance(productionClass.project)
+                        .findFile(documentationTestVirtualFile)
             }
             return documentationTestFile
         }
@@ -34,7 +35,7 @@ class RestDocsHelper {
         fun getDocumentationTestFileName(productionClass: PsiClass): String {
             return productionClass.name + "DocumentationTest.java"
         }
-        
+
         fun getPackageName(selectedClass: PsiClass): String {
             val selectedClassFile = selectedClass.containingFile
             var packageName = ""
@@ -48,7 +49,8 @@ class RestDocsHelper {
             val productionClass = currentMethod.containingClass!!
             val testSourceRoots = getPossibleTestSourceRoots(productionClass)
             for (testSourceRoot in testSourceRoots) {
-                val correspondingDocumentationTestFile = getCorrespondingDocumentationTestFile(testSourceRoot, productionClass)
+                val correspondingDocumentationTestFile =
+                    getCorrespondingDocumentationTestFile(testSourceRoot, productionClass)
                 if (correspondingDocumentationTestFile != null) {
                     val documentationTestClass = PsiTreeUtil.getChildOfType(
                         correspondingDocumentationTestFile,

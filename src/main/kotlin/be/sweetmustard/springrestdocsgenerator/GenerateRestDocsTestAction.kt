@@ -29,7 +29,7 @@ import javax.swing.ListSelectionModel
 class GenerateRestDocsTestAction : AnAction() {
     private val testMethodGenerator = TestMethodGenerator()
     private val testFileGenerator = TestFileGenerator()
-    
+
     override fun actionPerformed(event: AnActionEvent) {
         val selectedElement: PsiElement? = event.getData(CommonDataKeys.PSI_ELEMENT)
         val currentProject = event.project!!
@@ -65,9 +65,10 @@ class GenerateRestDocsTestAction : AnAction() {
     private fun canGenerateDocumentationTestForMethod(selectedMethod: PsiMethod?) =
         selectedMethod != null &&
                 (selectedMethod.annotations.stream().map { it.qualifiedName }
-                            .anyMatch { it?.endsWith("Mapping") == true } ||
-                        selectedMethod.returnTypeElement?.type.toString().contains("ResponseEntity"))
-    
+                    .anyMatch { it?.endsWith("Mapping") == true } ||
+                        selectedMethod.returnTypeElement?.type.toString()
+                            .contains("ResponseEntity"))
+
     private fun showCreateOrJumpDialog(
         currentProject: Project,
         selectedMethod: PsiMethod,
@@ -163,7 +164,7 @@ class GenerateRestDocsTestAction : AnAction() {
             .createPopup()
             .showInBestPositionFor(event.dataContext)
     }
-    
+
     private fun generateRestDocumentationTest(
         selectedMethod: PsiMethod,
         currentProject: Project,
@@ -196,7 +197,7 @@ class GenerateRestDocsTestAction : AnAction() {
 
         documentationTestMethod.navigate(true)
     }
-    
+
     data class SelectionItem(
         val type: SelectionItemType,
         val title: String,

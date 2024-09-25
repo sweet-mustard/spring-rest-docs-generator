@@ -62,7 +62,7 @@ class TestMethodGenerator {
             documentationTestClass.add(mockMvcField)
         }
     }
-    
+
     private fun generateMethodBody(
         selectedMethod: PsiMethod,
         projectState: SpringRestDocsGeneratorState
@@ -243,7 +243,8 @@ class TestMethodGenerator {
 
     private fun getUriFromAnnotation(requestMappingClassLevel: PsiAnnotation?): String? {
         val uri =
-            requestMappingClassLevel?.parameterList?.attributes?.filter { it.name == null || it.name == "value" || it.name == "path" }
+            requestMappingClassLevel?.parameterList?.attributes
+                ?.filter { it.name == null || it.name == "value" || it.name == "path" }
                 ?.getOrNull(0)
         if (uri == null) {
             return ""

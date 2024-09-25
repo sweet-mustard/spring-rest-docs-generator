@@ -8,7 +8,7 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 
 
-class SpringRestDocsGeneratorSettingsConfigurable(private val project : Project) : Configurable {
+class SpringRestDocsGeneratorSettingsConfigurable(private val project: Project) : Configurable {
 
     private var mySettingsComponent: SpringRestDocsGeneratorSettingsComponent? = null
 
@@ -16,7 +16,7 @@ class SpringRestDocsGeneratorSettingsConfigurable(private val project : Project)
     override fun getDisplayName(): @Nls(capitalization = Nls.Capitalization.Title) String {
         return "Spring REST Docs Generator"
     }
-    
+
     override fun getPreferredFocusedComponent(): JComponent? {
         return mySettingsComponent?.getPreferredFocusedComponent()
     }
@@ -29,19 +29,25 @@ class SpringRestDocsGeneratorSettingsConfigurable(private val project : Project)
     override fun isModified(): Boolean {
         val state: SpringRestDocsGeneratorState =
             Objects.requireNonNull(SpringRestDocsGeneratorSettings.getInstance(project).state)
-        return !(mySettingsComponent?.getRestControllerAnnotations()?.equals(state.restControllerDocumentationTestClassAnnotations)!! &&
-                mySettingsComponent?.getMethodAnnotations()?.equals(state.restControllerDocumentationTestMethodAnnotations)!! &&
+        return !(mySettingsComponent?.getRestControllerAnnotations()
+            ?.equals(state.restControllerDocumentationTestClassAnnotations)!! &&
+                mySettingsComponent?.getMethodAnnotations()
+                    ?.equals(state.restControllerDocumentationTestMethodAnnotations)!! &&
                 mySettingsComponent?.getMockMvcAdditions()?.equals(state.mockMvcAdditions)!! &&
-                mySettingsComponent?.getDefaultAnnotationUsage()?.equals(state.useDefaultClassAnnotation)!! &&
-                mySettingsComponent?.getCustomClassAnnotation()?.equals(state.customClassAnnotation)!!
+                mySettingsComponent?.getDefaultAnnotationUsage()
+                    ?.equals(state.useDefaultClassAnnotation)!! &&
+                mySettingsComponent?.getCustomClassAnnotation()
+                    ?.equals(state.customClassAnnotation)!!
                 )
     }
 
     override fun apply() {
         val state: SpringRestDocsGeneratorState =
             Objects.requireNonNull(SpringRestDocsGeneratorSettings.getInstance(project).state)
-        state.restControllerDocumentationTestClassAnnotations = mySettingsComponent?.getRestControllerAnnotations()!!
-        state.restControllerDocumentationTestMethodAnnotations = mySettingsComponent?.getMethodAnnotations()!!
+        state.restControllerDocumentationTestClassAnnotations =
+            mySettingsComponent?.getRestControllerAnnotations()!!
+        state.restControllerDocumentationTestMethodAnnotations =
+            mySettingsComponent?.getMethodAnnotations()!!
         state.mockMvcAdditions = mySettingsComponent?.getMockMvcAdditions()!!
         state.useDefaultClassAnnotation = mySettingsComponent?.getDefaultAnnotationUsage()!!
         state.customClassAnnotation = mySettingsComponent?.getCustomClassAnnotation()!!
