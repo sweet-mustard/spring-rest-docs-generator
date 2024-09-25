@@ -15,7 +15,7 @@ import javax.swing.*
 
 class SpringRestDocsGeneratorSettingsComponent() {
     private var myMainPanel: JPanel? = null
-    private val additionalRestControllerDocumentationTestAnnotations : JTextArea
+    private val additionalClassAnnotations : JTextArea
     private val additionalTestMethodAnnotations : JTextArea
     private val mockMvcAdditions : JTextArea
     private val useDefaultClassAnnotation : JBRadioButton
@@ -24,16 +24,12 @@ class SpringRestDocsGeneratorSettingsComponent() {
     
     
     init {
-        additionalRestControllerDocumentationTestAnnotations = createTextArea()
-        val additionalRestControllerDocumentationTestAnnotationsScrollPane = 
-            createLabelledScrollPaneAroundTextArea(additionalRestControllerDocumentationTestAnnotations, "Additional", "Semicolon- or enter-separated list")
-        
-        additionalTestMethodAnnotations = createTextArea()
-        val additionalTestMethodAnnotationsScrollPane = 
-            createLabelledScrollPaneAroundTextArea(additionalTestMethodAnnotations, "Test methods", "Semicolon- or enter-separated list")
 
         val classAnnotations = JPanel(GridLayout(2, 1))
+        
         val mainClassAnnotation = JPanel(GridLayout(2, 1))
+
+        val defaultClassAnnotation = JPanel(FlowLayout(FlowLayout.LEADING))
         useDefaultClassAnnotation = JBRadioButton("Default:")
         val defaultClassAnnotationText = JBTextArea(
             listOf(
@@ -42,34 +38,40 @@ class SpringRestDocsGeneratorSettingsComponent() {
                 "@WebMvcTest({{rest-controller-name}.class})"
             ).joinToString(System.lineSeparator())
         )
-        val defaultClassAnnotation = JPanel(FlowLayout(FlowLayout.LEADING))
         defaultClassAnnotation.add(useDefaultClassAnnotation)
         defaultClassAnnotation.add(defaultClassAnnotationText)
-        
-        
+
+        val customClassAnnotation = JPanel(FlowLayout(FlowLayout.LEADING))
         useCustomClassAnnotation = JBRadioButton("Custom:")
         customClassAnnotationText = JBTextField(40)
-        val customClassAnnotation = JPanel(FlowLayout(FlowLayout.LEADING))
         customClassAnnotation.add(useCustomClassAnnotation)
         customClassAnnotation.add(customClassAnnotationText)
         
         mainClassAnnotation.add(defaultClassAnnotation)
         mainClassAnnotation.add(customClassAnnotation)
+
         useDefaultClassAnnotation.addItemListener {
             useCustomClassAnnotation.isSelected = it.stateChange != ItemEvent.SELECTED
             customClassAnnotationText.isEnabled = it.stateChange != ItemEvent.SELECTED
         }
-
         useCustomClassAnnotation.addItemListener {
             useDefaultClassAnnotation.isSelected = (it.stateChange != ItemEvent.SELECTED)
         }
-        
+
+        additionalClassAnnotations = createTextArea()
+        val additionalClassAnnotationsScrollPane =
+            createLabelledScrollPaneAroundTextArea(additionalClassAnnotations, "Additional", "Semicolon- or enter-separated list")
+
         classAnnotations.add(FormBuilder.createFormBuilder()
-            .addLabeledComponent(JBLabel("Class"), mainClassAnnotation, true)
-            .addComponentFillVertically(additionalRestControllerDocumentationTestAnnotationsScrollPane, 10)
+            .addLabeledComponent(JBLabel("Class level"), mainClassAnnotation, true)
+            .addComponent(additionalClassAnnotationsScrollPane, 5)
             .panel
         )
 
+        additionalTestMethodAnnotations = createTextArea()
+        val additionalTestMethodAnnotationsScrollPane =
+            createLabelledScrollPaneAroundTextArea(additionalTestMethodAnnotations, "Test method level", "Semicolon- or enter-separated list")
+        
         val annotations = JPanel(GridLayout(1, 2, 20, 0))
         annotations.border = IdeBorderFactory.createTitledBorder("Annotations")
         annotations.add(classAnnotations)
@@ -120,15 +122,15 @@ class SpringRestDocsGeneratorSettingsComponent() {
     }
 
     fun getPreferredFocusedComponent(): JComponent {
-        return additionalRestControllerDocumentationTestAnnotations
+        return additionalClassAnnotations
     }
     
     fun getRestControllerAnnotations(): List<String> {
-        return additionalRestControllerDocumentationTestAnnotations.text.split("[;\n]+".toRegex()).stream().filter {it.isNotBlank()}.toList()
+        return additionalClassAnnotations.text.split("[;\n]+".toRegex()).stream().filter {it.isNotBlank()}.toList()
     }
     
     fun setRestControllerAnnotations(newRestControllerAnnotations : List<String>) {
-        additionalRestControllerDocumentationTestAnnotations.text = newRestControllerAnnotations.joinToString(System.lineSeparator()) { it }
+        additionalClassAnnotations.text = newRestControllerAnnotations.joinToString(System.lineSeparator()) { it }
     }
     
     fun getMethodAnnotations(): List<String> {
