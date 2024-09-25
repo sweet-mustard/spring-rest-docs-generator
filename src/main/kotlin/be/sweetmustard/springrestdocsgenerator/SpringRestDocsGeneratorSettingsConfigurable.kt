@@ -30,7 +30,8 @@ class SpringRestDocsGeneratorSettingsConfigurable(private val project : Project)
         val state: SpringRestDocsGeneratorState =
             Objects.requireNonNull(SpringRestDocsGeneratorSettings.getInstance(project).state)
         return !(mySettingsComponent?.getRestControllerAnnotations()?.equals(state.restControllerDocumentationTestClassAnnotations)!! &&
-                mySettingsComponent?.getMethodAnnotations()?.equals(state.restControllerDocumentationTestMethodAnnotations)!!
+                mySettingsComponent?.getMethodAnnotations()?.equals(state.restControllerDocumentationTestMethodAnnotations)!! &&
+                mySettingsComponent?.getMockMvcAdditions()?.equals(state.mockMvcAdditions)!!
                 )
     }
 
@@ -39,6 +40,7 @@ class SpringRestDocsGeneratorSettingsConfigurable(private val project : Project)
             Objects.requireNonNull(SpringRestDocsGeneratorSettings.getInstance(project).state)
         state.restControllerDocumentationTestClassAnnotations = mySettingsComponent?.getRestControllerAnnotations()!!
         state.restControllerDocumentationTestMethodAnnotations = mySettingsComponent?.getMethodAnnotations()!!
+        state.mockMvcAdditions = mySettingsComponent?.getMockMvcAdditions()!!
     }
 
     override fun reset() {
@@ -46,6 +48,7 @@ class SpringRestDocsGeneratorSettingsConfigurable(private val project : Project)
             Objects.requireNonNull(SpringRestDocsGeneratorSettings.getInstance(project).state)
         mySettingsComponent?.setRestControllerAnnotations(state.restControllerDocumentationTestClassAnnotations)
         mySettingsComponent?.setMethodAnnotations(state.restControllerDocumentationTestMethodAnnotations)
+        mySettingsComponent?.setMockMvcAdditions(state.mockMvcAdditions)
         
     }
 

@@ -434,6 +434,13 @@ class GenerateRestDocsTestAction : AnAction() {
             methodBodyBuilder.append(requestObjectType?.let { generateJsonRequestBody(it) })
             methodBodyBuilder.closeParenthesis()
         }
+        val state = SpringRestDocsGeneratorSettings.getInstance(selectedMethod.project).state
+        methodBodyBuilder.appendLine(
+            state.mockMvcAdditions.stream()
+                .reduce { a, b -> a + System.lineSeparator() + b }
+                .orElse("")
+        )
+        
         methodBodyBuilder.closeParenthesis()
         methodBodyBuilder.appendLine()
 

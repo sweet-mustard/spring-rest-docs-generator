@@ -8,6 +8,7 @@ class SpringRestDocsGeneratorSettingsComponent() {
     private var myMainPanel: JPanel? = null
     private val additionalRestControllerDocumentationTestAnnotations = JTextArea(5, 30)
     private val additionalTestMethodAnnotations = JTextArea(5, 30)
+    private val mockMvcAdditions = JTextArea(5, 30)
     
     
     init {
@@ -22,16 +23,25 @@ class SpringRestDocsGeneratorSettingsComponent() {
         additionalTestMethodAnnotations.lineWrap =true
         val additionalTestMethodAnnotationsScrollPane = JScrollPane(additionalTestMethodAnnotations, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED)
         val additionalTestMethodAnnotationsLabel = JLabel("Annotations for RestControllerDocumentationTest methods")
+
+        mockMvcAdditions.isEditable = true
+        mockMvcAdditions.wrapStyleWord = true
+        mockMvcAdditions.lineWrap =true
+        val mockMvcAdditionsScrollPane = JScrollPane(mockMvcAdditions, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED)
+        val mockMvcAdditionsLabel = JLabel("Code to insert inside mockMvc.perform()")
         
         myMainPanel = FormBuilder.createFormBuilder()
             .addLabeledComponent(additionalRestControllerDocumentationTestAnnotationsLabel, additionalRestControllerDocumentationTestAnnotationsScrollPane, 10, true)
             .addTooltip("Semicolon- or enter-separated list")
             .addLabeledComponent(additionalTestMethodAnnotationsLabel, additionalTestMethodAnnotationsScrollPane, 10, true)
             .addTooltip("Semicolon- or enter-separated list")
+            .addLabeledComponent(mockMvcAdditionsLabel, mockMvcAdditionsScrollPane, 10, true)
+            .addTooltip("Semicolon- or enter-separated list")
             .panel
         
         additionalRestControllerDocumentationTestAnnotations.font = myMainPanel!!.font
         additionalTestMethodAnnotations.font = myMainPanel!!.font
+        mockMvcAdditions.font = myMainPanel!!.font
     }
 
     fun getPanel(): JPanel? {
@@ -56,6 +66,14 @@ class SpringRestDocsGeneratorSettingsComponent() {
 
     fun setMethodAnnotations(newMethodAnnotations : List<String>) {
         additionalTestMethodAnnotations.text = newMethodAnnotations.joinToString(";") { it }
+    }
+    
+    fun getMockMvcAdditions() : List<String> {
+        return mockMvcAdditions.text.split("[;\n]+".toRegex()).stream().filter {it.isNotBlank()}.toList()
+    }
+    
+    fun setMockMvcAdditions(newMockMvcAdditions : List<String>) {
+        mockMvcAdditions.text = newMockMvcAdditions.joinToString(";") { it }
     }
 
 
