@@ -1,47 +1,72 @@
 package be.sweetmustard.springrestdocsgenerator
 
+import com.intellij.ui.IdeBorderFactory
+import com.intellij.ui.JBColor
+import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.FormBuilder
+import java.awt.GridLayout
 import javax.swing.*
 
 
 class SpringRestDocsGeneratorSettingsComponent() {
     private var myMainPanel: JPanel? = null
-    private val additionalRestControllerDocumentationTestAnnotations = JTextArea(5, 30)
-    private val additionalTestMethodAnnotations = JTextArea(5, 30)
-    private val mockMvcAdditions = JTextArea(5, 30)
+    private val additionalRestControllerDocumentationTestAnnotations : JTextArea
+    private val additionalTestMethodAnnotations : JTextArea
+    private val mockMvcAdditions : JTextArea
     
     
     init {
-        additionalRestControllerDocumentationTestAnnotations.isEditable = true
-        additionalRestControllerDocumentationTestAnnotations.wrapStyleWord = true
-        additionalRestControllerDocumentationTestAnnotations.lineWrap =true
-        val additionalRestControllerDocumentationTestAnnotationsScrollPane = JScrollPane(additionalRestControllerDocumentationTestAnnotations, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED)
-        val additionalRestControllerDocumentationTestAnnotationsLabel = JLabel("Annotations for RestControllerDocumentationTest classes")
-
-        additionalTestMethodAnnotations.isEditable = true
-        additionalTestMethodAnnotations.wrapStyleWord = true
-        additionalTestMethodAnnotations.lineWrap =true
-        val additionalTestMethodAnnotationsScrollPane = JScrollPane(additionalTestMethodAnnotations, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED)
-        val additionalTestMethodAnnotationsLabel = JLabel("Annotations for RestControllerDocumentationTest methods")
-
-        mockMvcAdditions.isEditable = true
-        mockMvcAdditions.wrapStyleWord = true
-        mockMvcAdditions.lineWrap =true
-        val mockMvcAdditionsScrollPane = JScrollPane(mockMvcAdditions, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED)
-        val mockMvcAdditionsLabel = JLabel("Code to insert inside mockMvc.perform()")
+        additionalRestControllerDocumentationTestAnnotations = createTextArea()
+        val additionalRestControllerDocumentationTestAnnotationsScrollPane = 
+            createLabelledScrollPaneAroundTextArea(additionalRestControllerDocumentationTestAnnotations, "Documentation classes", "Semicolon- or enter-separated list")
         
+        additionalTestMethodAnnotations = createTextArea()
+        val additionalTestMethodAnnotationsScrollPane = 
+            createLabelledScrollPaneAroundTextArea(additionalTestMethodAnnotations, "Test methods", "Semicolon- or enter-separated list")
+
+        val annotations = JPanel(GridLayout(1, 2, 20, 0))
+        annotations.border = IdeBorderFactory.createTitledBorder("Annotations")
+        annotations.add(additionalRestControllerDocumentationTestAnnotationsScrollPane)
+        annotations.add(additionalTestMethodAnnotationsScrollPane)
+        
+        mockMvcAdditions = createTextArea()
+        val mockMvcAdditionsPanel =
+            createLabelledScrollPaneAroundTextArea(mockMvcAdditions, "Code to insert inside mockMvc.perform()", "")
+
         myMainPanel = FormBuilder.createFormBuilder()
-            .addLabeledComponent(additionalRestControllerDocumentationTestAnnotationsLabel, additionalRestControllerDocumentationTestAnnotationsScrollPane, 10, true)
-            .addTooltip("Semicolon- or enter-separated list")
-            .addLabeledComponent(additionalTestMethodAnnotationsLabel, additionalTestMethodAnnotationsScrollPane, 10, true)
-            .addTooltip("Semicolon- or enter-separated list")
-            .addLabeledComponent(mockMvcAdditionsLabel, mockMvcAdditionsScrollPane, 10, true)
-            .addTooltip("Semicolon- or enter-separated list")
+            .addComponent(annotations)
+            .addComponent(mockMvcAdditionsPanel)
+            .addComponentFillVertically(JPanel(), 0)
             .panel
-        
-        additionalRestControllerDocumentationTestAnnotations.font = myMainPanel!!.font
-        additionalTestMethodAnnotations.font = myMainPanel!!.font
-        mockMvcAdditions.font = myMainPanel!!.font
+    }
+
+    private fun createTextArea(): JTextArea {
+        val jTextArea = JTextArea(5, 10)
+        jTextArea.isEditable = true
+        jTextArea.wrapStyleWord = true
+        jTextArea.lineWrap =true
+        jTextArea.margin.left = 4
+        jTextArea.margin.top = 2
+        return jTextArea
+    }
+
+    private fun createLabelledScrollPaneAroundTextArea(jTextArea: JTextArea, label : String, toolTip : String) : JComponent {
+        val jScrollPane = JScrollPane(
+            jTextArea,
+            JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+            JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED
+        )
+        jScrollPane.border = BorderFactory.createLineBorder(JBColor.border(), 1)
+
+        return FormBuilder.createFormBuilder()
+            .addLabeledComponent(
+                JBLabel(label),
+                jScrollPane,
+                10,
+                true
+            )
+            .addTooltip(toolTip)
+            .panel
     }
 
     fun getPanel(): JPanel? {
@@ -57,7 +82,7 @@ class SpringRestDocsGeneratorSettingsComponent() {
     }
     
     fun setRestControllerAnnotations(newRestControllerAnnotations : List<String>) {
-        additionalRestControllerDocumentationTestAnnotations.text = newRestControllerAnnotations.joinToString(";") { it }
+        additionalRestControllerDocumentationTestAnnotations.text = newRestControllerAnnotations.joinToString(System.lineSeparator()) { it }
     }
     
     fun getMethodAnnotations(): List<String> {
@@ -65,7 +90,7 @@ class SpringRestDocsGeneratorSettingsComponent() {
     }
 
     fun setMethodAnnotations(newMethodAnnotations : List<String>) {
-        additionalTestMethodAnnotations.text = newMethodAnnotations.joinToString(";") { it }
+        additionalTestMethodAnnotations.text = newMethodAnnotations.joinToString(System.lineSeparator()) { it }
     }
     
     fun getMockMvcAdditions() : List<String> {
@@ -73,7 +98,7 @@ class SpringRestDocsGeneratorSettingsComponent() {
     }
     
     fun setMockMvcAdditions(newMockMvcAdditions : List<String>) {
-        mockMvcAdditions.text = newMockMvcAdditions.joinToString(";") { it }
+        mockMvcAdditions.text = newMockMvcAdditions.joinToString(System.lineSeparator()) { it }
     }
 
 
