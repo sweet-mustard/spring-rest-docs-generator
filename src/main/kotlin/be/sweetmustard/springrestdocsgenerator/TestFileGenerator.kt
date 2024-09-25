@@ -70,7 +70,7 @@ class TestFileGenerator {
             elementFactory.createClass(classFileName.removeSuffix(".java"))
 
         PsiUtil.setModifierProperty(restDocumentationTestClass, PsiModifier.PACKAGE_LOCAL, true)
-        for (annotation in projectState.restControllerDocumentationTestClassAnnotations) {
+        for (annotation in projectState.restControllerDocumentationTestClassAnnotations.reversed()) {
             restDocumentationTestClass.modifierList?.addAnnotation(
                 annotation.replace("^@+".toRegex(), "")
             )

@@ -29,7 +29,7 @@ class TestMethodGenerator {
 
             PsiUtil.addException(documentationTestMethod, "Exception")
             documentationTestMethod.modifierList.addAnnotation("Test")
-            for (annotation in projectState.restControllerDocumentationTestMethodAnnotations) {
+            for (annotation in projectState.restControllerDocumentationTestMethodAnnotations.reversed()) {
                 documentationTestMethod.modifierList.addAnnotation(annotation)
             }
 
