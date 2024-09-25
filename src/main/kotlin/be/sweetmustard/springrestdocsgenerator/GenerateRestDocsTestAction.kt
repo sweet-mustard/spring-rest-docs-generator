@@ -239,7 +239,7 @@ class GenerateRestDocsTestAction : AnAction() {
             val fileContentBuilder = StringBuilder()
 
             fileContentBuilder.append(packageStatement(restController))
-            fileContentBuilder.append(importsForDocumentationTest(currentProject))
+            fileContentBuilder.append(importsForDocumentationTestFile(currentProject))
             
             val documentationTestFileName =
                 RestDocsHelper.getDocumentationTestFileName(restController)
@@ -310,31 +310,31 @@ class GenerateRestDocsTestAction : AnAction() {
         return restDocumentationTestClass
     }
 
-    private fun importsForDocumentationTest(project: Project): String {
+    private fun importsForDocumentationTestFile(project: Project): String {
         val state = SpringRestDocsGeneratorSettings.getInstance(project).state
-        
-        val builder = StringBuilder()
-        
-        builder.appendLine()
-        builder.appendLine("import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;")
-        builder.appendLine("import static org.springframework.restdocs.payload.PayloadDocumentation.*;")
-        builder.appendLine("import static org.springframework.restdocs.request.RequestDocumentation.*;")
-        builder.appendLine("import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;")
-        builder.appendLine("import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;")
-        builder.appendLine()
-        builder.appendLine("import org.junit.jupiter.api.Test;")
-        builder.appendLine()
-        builder.appendLine("import org.springframework.http.MediaType;")
-        builder.appendLine("import org.springframework.beans.factory.annotation.Autowired;")
-        if (state.useDefaultClassAnnotation) {
-            builder.appendLine("import org.junit.jupiter.api.extension.ExtendWith;")
-            builder.appendLine("import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs;")
-            builder.appendLine("import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;")
-            builder.appendLine("import org.springframework.restdocs.RestDocumentationExtension;")
-        }
-        builder.appendLine()
 
-        return builder.toString()
+        with(StringBuilder()) {
+            appendLine()
+            appendLine("import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;")
+            appendLine("import static org.springframework.restdocs.payload.PayloadDocumentation.*;")
+            appendLine("import static org.springframework.restdocs.request.RequestDocumentation.*;")
+            appendLine("import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;")
+            appendLine("import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;")
+            appendLine()
+            appendLine("import org.junit.jupiter.api.Test;")
+            appendLine()
+            appendLine("import org.springframework.http.MediaType;")
+            appendLine("import org.springframework.beans.factory.annotation.Autowired;")
+            if (state.useDefaultClassAnnotation) {
+                appendLine("import org.junit.jupiter.api.extension.ExtendWith;")
+                appendLine("import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs;")
+                appendLine("import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;")
+                appendLine("import org.springframework.restdocs.RestDocumentationExtension;")
+            }
+            appendLine()
+            return toString()
+        }
+        
     }
 
     private fun formatDocumentationTestFile(
