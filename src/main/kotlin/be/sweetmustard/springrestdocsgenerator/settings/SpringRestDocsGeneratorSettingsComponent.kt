@@ -1,29 +1,30 @@
 package be.sweetmustard.springrestdocsgenerator.settings
 
+import be.sweetmustard.springrestdocsgenerator.SpringRestDocsGeneratorBundle
 import com.intellij.openapi.ui.DialogPanel
 import com.intellij.ui.dsl.builder.*
 import javax.swing.JComponent
 
 class SpringRestDocsGeneratorSettingsComponent(private val state: SpringRestDocsGeneratorState) {
     private val myMainPanel: DialogPanel = panel {
-        group("Annotations") {
+        group(SpringRestDocsGeneratorBundle.message("settings.annotations.header")) {
             twoColumnsRow(
                 {
                     panel {
-                        group("Class Level") {
+                        group(SpringRestDocsGeneratorBundle.message("settings.annotations.class.header")) {
                             buttonsGroup {
                                 row {
-                                    radioButton("Default:", true)
-                                    text(
-                                        listOf(
-                                            "@ExtendWith({RestDocumentationExtension.class})",
-                                            "@AutoConfigureRestDocs",
-                                            "@WebMvcTest({rest-controller-name}.class)"
-                                        ).joinToString("<br>")
+                                    radioButton(
+                                        SpringRestDocsGeneratorBundle.message("option.default"),
+                                        true
                                     )
+                                    text(SpringRestDocsGeneratorBundle.message("settings.annotations.class.default"))
                                 }
                                 row {
-                                    radioButton("Custom:", false)
+                                    radioButton(
+                                        SpringRestDocsGeneratorBundle.message("option.custom"),
+                                        false
+                                    )
                                     textArea().bindText(state::customClassAnnotation)
                                         .align(Align.FILL)
                                 }
@@ -34,11 +35,11 @@ class SpringRestDocsGeneratorSettingsComponent(private val state: SpringRestDocs
                 },
                 {
                     panel {
-                        group("Test Method Level") {
+                        group(SpringRestDocsGeneratorBundle.message("settings.annotations.method.header")) {
 
                             row {
-                                label("Default:")
-                                text("@Test")
+                                label(SpringRestDocsGeneratorBundle.message("option.default"))
+                                text(SpringRestDocsGeneratorBundle.message("settings.annotations.method.default"))
                             }
                             additionalTestAnnotations()
                         }
@@ -46,11 +47,14 @@ class SpringRestDocsGeneratorSettingsComponent(private val state: SpringRestDocs
                 }
             )
         }
-        group("MockMvc") {
+        group(SpringRestDocsGeneratorBundle.message("settings.mockmvc.header")) {
             row {
                 textArea().bindText(state::mockMvcAdditions)
                     .align(Align.FILL)
-                    .label("Code to add inside mockMvc.perform()", LabelPosition.TOP)
+                    .label(
+                        SpringRestDocsGeneratorBundle.message("settings.mockmvc.label"),
+                        LabelPosition.TOP
+                    )
                     .component.rows = 5
             }
         }
@@ -67,8 +71,8 @@ class SpringRestDocsGeneratorSettingsComponent(private val state: SpringRestDocs
                     state.restControllerDocumentationTestMethodAnnotations =
                         it.split("\n+".toRegex()).stream().toList()
                 }
-            ).label("Additional", LabelPosition.TOP)
-                .comment("Put separate values on separate lines")
+            ).label(SpringRestDocsGeneratorBundle.message("option.additional"), LabelPosition.TOP)
+                .comment(SpringRestDocsGeneratorBundle.message("tooltip.enter-separated"))
                 .align(Align.FILL)
                 .component.rows = 5
         }
@@ -85,8 +89,8 @@ class SpringRestDocsGeneratorSettingsComponent(private val state: SpringRestDocs
                     state.restControllerDocumentationTestClassAnnotations =
                         it.split("\n+".toRegex()).stream().toList()
                 }
-            ).label("Additional", LabelPosition.TOP)
-                .comment("Put separate values on separate lines")
+            ).label(SpringRestDocsGeneratorBundle.message("option.additional"), LabelPosition.TOP)
+                .comment(SpringRestDocsGeneratorBundle.message("tooltip.enter-separated"))
                 .align(Align.FILL)
                 .component.rows = 5
         }
