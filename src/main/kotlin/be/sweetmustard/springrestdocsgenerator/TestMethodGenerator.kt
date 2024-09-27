@@ -30,7 +30,12 @@ class TestMethodGenerator {
             PsiUtil.addException(documentationTestMethod, "Exception")
             documentationTestMethod.modifierList.addAnnotation("Test")
             for (annotation in projectState.restControllerDocumentationTestMethodAnnotations.reversed()) {
-                documentationTestMethod.modifierList.addAnnotation(annotation)
+                documentationTestMethod.modifierList.addAnnotation(
+                    annotation.replace(
+                        "^@+".toRegex(),
+                        ""
+                    ).trim()
+                )
             }
 
             PsiUtil.setModifierProperty(documentationTestMethod, PsiModifier.PACKAGE_LOCAL, true)

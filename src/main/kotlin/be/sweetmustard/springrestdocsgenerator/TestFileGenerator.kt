@@ -72,7 +72,7 @@ class TestFileGenerator {
         PsiUtil.setModifierProperty(restDocumentationTestClass, PsiModifier.PACKAGE_LOCAL, true)
         for (annotation in projectState.restControllerDocumentationTestClassAnnotations.reversed()) {
             restDocumentationTestClass.modifierList?.addAnnotation(
-                annotation.replace("^@+".toRegex(), "")
+                annotation.replace("^@+".toRegex(), "").trim()
             )
         }
         if (projectState.useDefaultClassAnnotation) {
