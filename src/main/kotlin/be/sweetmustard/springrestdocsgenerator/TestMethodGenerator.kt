@@ -1,5 +1,6 @@
 package be.sweetmustard.springrestdocsgenerator
 
+import be.sweetmustard.springrestdocsgenerator.TreeNode.Companion.generateJsonRequestBody
 import be.sweetmustard.springrestdocsgenerator.settings.SpringRestDocsGeneratorState
 import com.intellij.psi.*
 import com.intellij.psi.util.PsiTypesUtil
