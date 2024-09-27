@@ -3,7 +3,6 @@ package be.sweetmustard.springrestdocsgenerator
 import be.sweetmustard.springrestdocsgenerator.NodeType.*
 import com.intellij.psi.PsiField
 import com.intellij.psi.PsiType
-import com.intellij.psi.PsiTypes
 import com.intellij.psi.impl.source.PsiClassReferenceType
 import com.intellij.psi.util.PsiTypesUtil
 import com.intellij.util.containers.stream
@@ -15,7 +14,7 @@ fun generateResponseFieldDescriptions(responseObjectType: PsiType?): String {
     if (responseObjectType == null) {
         return ""
     }
-    if (isResponseEntityType(responseObjectType)) {
+    if (TypeChecker.isResponseEntityType(responseObjectType)) {
         val responseFieldDescriptions = generateFieldDescriptions(
             (responseObjectType as PsiClassReferenceType).parameters[0],
             "",
@@ -60,7 +59,7 @@ fun generateFieldDescriptions(field: PsiField, pathPrefix: String, remainingDept
     val fieldType = field.type
     val description = ""
 
-    if (isListType(fieldType)) {
+    if (TypeChecker.isListType(fieldType)) {
         fieldDescriptions.add(FieldDescription(pathPrefix, field.name, description))
         val parameterType = (fieldType as PsiClassReferenceType).parameters[0]!!
         fieldDescriptions.addAll(generateFieldDescriptions(
@@ -70,7 +69,7 @@ fun generateFieldDescriptions(field: PsiField, pathPrefix: String, remainingDept
         ))
     } else {
         fieldDescriptions.add(FieldDescription(pathPrefix, field.name, description))
-        if (!isBasicType(fieldType) && !isMapType(fieldType)) {
+        if (!TypeChecker.isBasicType(fieldType) && !TypeChecker.isMapType(fieldType)) {
             fieldDescriptions.addAll(generateFieldDescriptions(
                 fieldType,
                 pathPrefix + field.name + ".",
@@ -86,8 +85,8 @@ fun generateFieldDescriptions(classType: PsiType, pathPrefix: String, remainingD
     if (remainingDepth < 0) {
         return fieldDescriptions
     }
-    
-    if (isListType(classType)) {
+
+    if (TypeChecker.isListType(classType)) {
         fieldDescriptions.add(FieldDescription(pathPrefix, "[]", ""))
         val parameterType = (classType as PsiClassReferenceType).parameters[0]
         fieldDescriptions.addAll(generateFieldDescriptions(
@@ -95,7 +94,7 @@ fun generateFieldDescriptions(classType: PsiType, pathPrefix: String, remainingD
             "$pathPrefix[].",
             remainingDepth - 1
         ))
-    } else if (!isBasicType(classType) && !isMapType(classType)) {
+    } else if (!TypeChecker.isBasicType(classType) && !TypeChecker.isMapType(classType)) {
         for (field in PsiTypesUtil.getPsiClass(classType)?.fields!!) {
             fieldDescriptions.addAll(generateFieldDescriptions(
                 field,
@@ -143,10 +142,10 @@ fun generateLeaves(field: PsiField, remainingDepth: Int) : List<TreeNode> {
 
     val fieldType = field.type
 
-    if (isListType(fieldType)) {
+    if (TypeChecker.isListType(fieldType)) {
         val parameterType = (fieldType as PsiClassReferenceType).parameters[0]!!
         subNodes.add(TreeNode(field.name, generateLeaves(parameterType, remainingDepth - 1), NAMED_LIST))
-    } else if (!isBasicType(fieldType)) {
+    } else if (!TypeChecker.isBasicType(fieldType)) {
             subNodes.add(TreeNode(field.name, generateLeaves(fieldType, remainingDepth - 1), COMPOSITE_OBJECT))
     } else {
             subNodes.add(TreeNode(field.name, emptyList(), SIMPLE_OBJECT))
@@ -160,11 +159,11 @@ fun generateLeaves(classType: PsiType, remainingDepth: Int) : List<TreeNode> {
     if (remainingDepth < 0) {
         return subNodes
     }
-    
-    if (isListType(classType)) {
+
+    if (TypeChecker.isListType(classType)) {
         val parameterType = (classType as PsiClassReferenceType).parameters[0]
         subNodes.add(TreeNode("", generateLeaves(parameterType, remainingDepth - 1), UNNAMED_LIST))
-    } else if (!isBasicType(classType)) {
+    } else if (!TypeChecker.isBasicType(classType)) {
         subNodes.addAll(PsiTypesUtil.getPsiClass(classType)?.fields!!.stream()
             .map { generateLeaves(it, remainingDepth - 1) }
             .flatMap { it.stream() }
@@ -214,18 +213,6 @@ fun buildJsonPiece(subNodes : List<TreeNode>, indent: Int) : String {
         .reduce { a, b -> "$a ," + System.lineSeparator() + b }
         .orElse("")
 }
-val basicTypes = listOf("String", "Integer", "Boolean", "UUID", "Long", "Double").union(PsiTypes.primitiveTypes().stream().map { it.name }.toList()).plus(PsiTypes.voidType().name)
-
-private fun isBasicType(classType: PsiType) =
-    basicTypes.stream().anyMatch { classType.toString().contains(it) }
-
-private fun isListType(classType: PsiType) = classType.toString().contains("List")
-
-private fun isResponseEntityType(responseObjectType: PsiType) =
-    responseObjectType.toString().contains("ResponseEntity")
-
-private fun isMapType(classType: PsiType) = classType.toString().contains("Map")
-
 
 data class FieldDescription(
     val pathPrefix: String,
