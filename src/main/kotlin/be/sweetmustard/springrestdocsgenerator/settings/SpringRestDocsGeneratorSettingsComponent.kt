@@ -69,7 +69,7 @@ class SpringRestDocsGeneratorSettingsComponent(private val state: SpringRestDocs
                 },
                 {
                     state.restControllerDocumentationTestMethodAnnotations =
-                        it.split("\n+".toRegex()).stream().toList()
+                        it.split("\n+".toRegex()).stream().filter { s -> s.isNotEmpty() }.toList()
                 }
             ).label(SpringRestDocsGeneratorBundle.message("option.additional"), LabelPosition.TOP)
                 .comment(SpringRestDocsGeneratorBundle.message("tooltip.enter-separated"))
@@ -87,7 +87,7 @@ class SpringRestDocsGeneratorSettingsComponent(private val state: SpringRestDocs
                 },
                 {
                     state.restControllerDocumentationTestClassAnnotations =
-                        it.split("\n+".toRegex()).stream().toList()
+                        it.split("\n+".toRegex()).stream().filter { s -> s.isNotEmpty() }.toList()
                 }
             ).label(SpringRestDocsGeneratorBundle.message("option.additional"), LabelPosition.TOP)
                 .comment(SpringRestDocsGeneratorBundle.message("tooltip.enter-separated"))
