@@ -10,39 +10,38 @@ class SpringRestDocsGeneratorSettingsComponent(private val state: SpringRestDocs
             twoColumnsRow(
                 {
                     panel {
-                        row {
-                            label("Class level")
+                        group("Class Level") {
+                            buttonsGroup {
+                                row {
+                                    radioButton("Default:", true)
+                                    text(
+                                        listOf(
+                                            "@ExtendWith({RestDocumentationExtension.class})",
+                                            "@AutoConfigureRestDocs",
+                                            "@WebMvcTest({rest-controller-name}.class)"
+                                        ).joinToString("<br>")
+                                    )
+                                }
+                                row {
+                                    radioButton("Custom:", false)
+                                    textArea().bindText(state::customClassAnnotation)
+                                        .align(Align.FILL)
+                                }
+                            }.bind<Boolean>(state::useDefaultClassAnnotation)
+                            additionalClassAnnotations()
                         }
-                        buttonsGroup {
-                            row {
-                                radioButton("Default:", true)
-                                text(
-                                    listOf(
-                                        "@ExtendWith({RestDocumentationExtension.class})",
-                                        "@AutoConfigureRestDocs",
-                                        "@WebMvcTest({rest-controller-name}.class)"
-                                    ).joinToString("<br>")
-                                )
-                            }
-                            row {
-                                radioButton("Custom:", false)
-                                textArea().bindText(state::customClassAnnotation)
-                                    .align(Align.FILL)
-                            }
-                        }.bind<Boolean>(state::useDefaultClassAnnotation)
-                        additionalClassAnnotations()
                     }
                 },
                 {
                     panel {
-                        row {
-                            label("Test method level")
+                        group("Test Method Level") {
+
+                            row {
+                                label("Default:")
+                                text("@Test")
+                            }
+                            additionalTestAnnotations()
                         }
-                        row {
-                            label("Default:")
-                            text("@Test")
-                        }
-                        additionalTestAnnotations()
                     }
                 }
             )
