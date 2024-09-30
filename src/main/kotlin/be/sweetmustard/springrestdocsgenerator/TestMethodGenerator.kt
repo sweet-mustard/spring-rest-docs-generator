@@ -8,9 +8,12 @@ import com.intellij.psi.util.parentOfType
 import com.intellij.util.containers.getIfSingle
 import com.intellij.util.containers.stream
 import io.ktor.util.*
+import java.util.logging.Logger
 
 class TestMethodGenerator {
 
+    val logger = Logger.getLogger(TestMethodGenerator::class.java.name)
+    
     internal fun getOrCreateDocumentationTestMethod(
         selectedMethod: PsiMethod,
         documentationTestClass: PsiClass,
@@ -18,12 +21,14 @@ class TestMethodGenerator {
         projectState: SpringRestDocsGeneratorState
     ): PsiMethod {
         val documentationTestName = selectedMethod.name + "Example"
-
+        logger.info("Getting documentation test method for %s".format(documentationTestName))
         var documentationTestMethod = documentationTestClass.methods.stream()
             .filter { it.name == documentationTestName }
             .getIfSingle()
 
+
         if (documentationTestMethod == null) {
+            logger.info("Creating documentation test method %s".format(documentationTestName))
             documentationTestMethod =
                 elementFactory.createMethod(documentationTestName, PsiTypes.voidType())
 
@@ -73,6 +78,8 @@ class TestMethodGenerator {
         selectedMethod: PsiMethod,
         projectState: SpringRestDocsGeneratorState
     ): String {
+
+        logger.info("Generating method body for %s".format(selectedMethod.name))
         val requestMappingOfMethod = getRequestMappingOfMethod(selectedMethod)
 
         val requestMappingOfClass =

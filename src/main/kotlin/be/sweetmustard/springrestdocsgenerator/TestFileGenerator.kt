@@ -7,8 +7,11 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.*
 import com.intellij.psi.codeStyle.CodeStyleManager
 import com.intellij.psi.util.PsiUtil
+import java.util.logging.Logger
 
 class TestFileGenerator {
+    private val logger = Logger.getLogger(TestFileGenerator::class.java.name)
+    
     internal fun createOrGetDocumentationTestFile(
         restController: PsiClass,
         currentProject: Project,
@@ -16,12 +19,13 @@ class TestFileGenerator {
         elementFactory: PsiElementFactory,
         projectState: SpringRestDocsGeneratorState
     ): PsiFile {
+        logger.info("Getting documentation test file for %s".format(restController.name))
         var documentationTestFile = RestDocsHelper.getCorrespondingDocumentationTestFile(
             testSourceRoot,
             restController
         )
         if (documentationTestFile == null) {
-
+            logger.info("Creating documentation test file for %s".format(restController.name))
             val fileContentBuilder = StringBuilder()
 
             fileContentBuilder.append(packageStatement(restController))
@@ -66,6 +70,7 @@ class TestFileGenerator {
         restController: PsiClass,
         projectState: SpringRestDocsGeneratorState
     ): PsiClass {
+        logger.info("Generating documentation test class for %s".format(classFileName))
         val restDocumentationTestClass =
             elementFactory.createClass(classFileName.removeSuffix(".java"))
 
