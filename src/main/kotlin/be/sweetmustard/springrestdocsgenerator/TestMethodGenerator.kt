@@ -10,9 +10,12 @@ import com.intellij.util.containers.stream
 import io.ktor.util.*
 import java.util.logging.Logger
 
-class TestMethodGenerator {
+class TestMethodGenerator(typeChecker: TypeChecker) {
 
-    val logger = Logger.getLogger(TestMethodGenerator::class.java.name)
+    private val logger = Logger.getLogger(TestMethodGenerator::class.java.name)
+    private val fieldDescriptionGenerator = FieldDescriptionGenerator(typeChecker)
+    private val jsonGenerator = JsonGenerator(typeChecker)
+    
     
     internal fun getOrCreateDocumentationTestMethod(
         selectedMethod: PsiMethod,
@@ -159,7 +162,11 @@ class TestMethodGenerator {
             methodBodyBuilder.append(".content")
 
             methodBodyBuilder.openParenthesis()
-            methodBodyBuilder.append(requestObjectType?.let { generateJsonRequestBody(it) })
+            methodBodyBuilder.append(requestObjectType?.let {
+                jsonGenerator.generateJsonRequestBody(
+                    it
+                )
+            })
             methodBodyBuilder.closeParenthesis()
         }
         methodBodyBuilder.appendLine(projectState.mockMvcAdditions)
@@ -179,8 +186,8 @@ class TestMethodGenerator {
         val documentationFields = listOf(
             generatePathParametersDocumentation(pathParameters),
             generateQueryParametersDocumentation(queryParameters),
-            generateRequestFieldDescriptions(requestObjectType),
-            generateResponseFieldDescriptions(responseObjectType)
+            fieldDescriptionGenerator.generateRequestFieldDescriptions(requestObjectType),
+            fieldDescriptionGenerator.generateResponseFieldDescriptions(responseObjectType)
         ).stream()
             .filter(String::isNotEmpty)
             .reduce { a, b -> "$a," + System.lineSeparator() + b }

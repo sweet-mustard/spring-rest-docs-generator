@@ -29,7 +29,8 @@ import javax.swing.ListSelectionModel
 
 
 class GenerateRestDocsTestAction : AnAction() {
-    private val testMethodGenerator = TestMethodGenerator()
+    private val typeChecker: TypeChecker = TypeChecker()
+    private val testMethodGenerator = TestMethodGenerator(typeChecker)
     private val testFileGenerator = TestFileGenerator()
 
     override fun actionPerformed(event: AnActionEvent) {
@@ -37,6 +38,7 @@ class GenerateRestDocsTestAction : AnAction() {
         val currentProject = event.project!!
         val projectState = SpringRestDocsGeneratorSettings.getInstance(currentProject).state
         val editor = FileEditorManager.getInstance(currentProject).selectedTextEditor!!
+
 
         if (selectedElement == null) {
             HintManager.getInstance()
@@ -56,6 +58,7 @@ class GenerateRestDocsTestAction : AnAction() {
             return
         }
 
+        typeChecker.updateJsonConvertibleTypes(currentProject)
         showCreateOrJumpDialog(
             currentProject,
             selectedMethod!!,
