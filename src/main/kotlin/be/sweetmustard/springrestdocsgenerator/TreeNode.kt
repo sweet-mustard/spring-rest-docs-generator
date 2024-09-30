@@ -35,7 +35,10 @@ private fun generateLeaves(field: PsiField, remainingDepth: Int): List<TreeNode>
                 NAMED_LIST
             )
         )
-    } else if (!TypeChecker.isBasicType(fieldType)) {
+    } else if (!TypeChecker.isBasicType(fieldType) && !TypeChecker.isJsonConvertibleType(fieldType) && !TypeChecker.isEnumType(
+            fieldType
+        )
+    ) {
         subNodes.add(
             TreeNode(
                 field.name,
@@ -65,7 +68,10 @@ private fun generateLeaves(classType: PsiType, remainingDepth: Int): List<TreeNo
                 UNNAMED_LIST
             )
         )
-    } else if (!TypeChecker.isBasicType(classType)) {
+    } else if (!TypeChecker.isBasicType(classType) && !TypeChecker.isJsonConvertibleType(classType) && !TypeChecker.isEnumType(
+            classType
+        )
+    ) {
         subNodes.addAll(
             PsiTypesUtil.getPsiClass(classType)?.fields!!.stream()
                 .map { generateLeaves(it, remainingDepth - 1) }

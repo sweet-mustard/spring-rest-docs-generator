@@ -7,7 +7,6 @@ import com.intellij.psi.util.PsiTypesUtil
 import java.util.stream.Collectors
 
 const val MAXIMAL_DEPTH = 10
-
 data class FieldDescription(
     val pathPrefix: String,
     val path: String,
@@ -69,7 +68,10 @@ fun generateFieldDescriptions(field: PsiField, pathPrefix: String, remainingDept
         ))
     } else {
         fieldDescriptions.add(FieldDescription(pathPrefix, field.name, description))
-        if (!TypeChecker.isBasicType(fieldType) && !TypeChecker.isMapType(fieldType)) {
+        if (!TypeChecker.isBasicType(fieldType) && !TypeChecker.isMapType(fieldType) && !TypeChecker.isJsonConvertibleType(
+                fieldType
+            ) && !TypeChecker.isEnumType(fieldType)
+        ) {
             fieldDescriptions.addAll(generateFieldDescriptions(
                 fieldType,
                 pathPrefix + field.name + ".",
@@ -94,7 +96,10 @@ fun generateFieldDescriptions(classType: PsiType, pathPrefix: String, remainingD
             "$pathPrefix[].",
             remainingDepth - 1
         ))
-    } else if (!TypeChecker.isBasicType(classType) && !TypeChecker.isMapType(classType)) {
+    } else if (!TypeChecker.isBasicType(classType) && !TypeChecker.isMapType(classType) && !TypeChecker.isJsonConvertibleType(
+            classType
+        ) && !TypeChecker.isEnumType(classType)
+    ) {
         for (field in PsiTypesUtil.getPsiClass(classType)?.fields!!) {
             fieldDescriptions.addAll(generateFieldDescriptions(
                 field,
