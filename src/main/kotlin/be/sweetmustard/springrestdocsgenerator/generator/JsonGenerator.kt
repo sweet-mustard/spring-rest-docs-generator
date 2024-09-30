@@ -1,12 +1,13 @@
-package be.sweetmustard.springrestdocsgenerator
+package be.sweetmustard.springrestdocsgenerator.generator
 
-import be.sweetmustard.springrestdocsgenerator.NodeType.*
+import be.sweetmustard.springrestdocsgenerator.NodeType
+import be.sweetmustard.springrestdocsgenerator.TreeNode
+import be.sweetmustard.springrestdocsgenerator.TypeChecker
 import com.intellij.psi.PsiField
 import com.intellij.psi.PsiType
 import com.intellij.psi.impl.source.PsiClassReferenceType
 import com.intellij.psi.util.PsiTypesUtil
 import com.intellij.util.containers.stream
-
 
 class JsonGenerator(private val typeChecker: TypeChecker) {
     private val MAXIMAL_DEPTH = 10
@@ -17,7 +18,7 @@ class JsonGenerator(private val typeChecker: TypeChecker) {
     }
 
     private fun generateTree(type: PsiType) =
-        TreeNode("", generateLeaves(type, MAXIMAL_DEPTH), ROOT)
+        TreeNode("", generateLeaves(type, MAXIMAL_DEPTH), NodeType.ROOT)
 
     private fun generateLeaves(field: PsiField, remainingDepth: Int): List<TreeNode> {
         val subNodes = ArrayList<TreeNode>()
@@ -33,7 +34,7 @@ class JsonGenerator(private val typeChecker: TypeChecker) {
                 TreeNode(
                     field.name,
                     generateLeaves(parameterType, remainingDepth - 1),
-                    NAMED_LIST
+                    NodeType.NAMED_LIST
                 )
             )
         } else if (!typeChecker.isBasicType(fieldType) && !typeChecker.isJsonConvertibleType(
@@ -46,11 +47,11 @@ class JsonGenerator(private val typeChecker: TypeChecker) {
                 TreeNode(
                     field.name,
                     generateLeaves(fieldType, remainingDepth - 1),
-                    COMPOSITE_OBJECT
+                    NodeType.COMPOSITE_OBJECT
                 )
             )
         } else {
-            subNodes.add(TreeNode(field.name, emptyList(), SIMPLE_OBJECT))
+            subNodes.add(TreeNode(field.name, emptyList(), NodeType.SIMPLE_OBJECT))
 
         }
         return subNodes
@@ -68,7 +69,7 @@ class JsonGenerator(private val typeChecker: TypeChecker) {
                 TreeNode(
                     "",
                     generateLeaves(parameterType, remainingDepth - 1),
-                    UNNAMED_LIST
+                    NodeType.UNNAMED_LIST
                 )
             )
         } else if (!typeChecker.isBasicType(classType) && !typeChecker.isJsonConvertibleType(
@@ -90,19 +91,19 @@ class JsonGenerator(private val typeChecker: TypeChecker) {
         val jsonNode = StringBuilder()
         val indentation = "  "
         when (treeNode.nodeType) {
-            ROOT -> {
+            NodeType.ROOT -> {
                 jsonNode.appendLine(indentation.repeat(indent) + "{")
                 jsonNode.appendLine(buildJsonPiece(treeNode.subNodes, indent + 1))
                 jsonNode.appendLine(indentation.repeat(indent) + "}")
             }
 
-            UNNAMED_LIST -> {
+            NodeType.UNNAMED_LIST -> {
                 jsonNode.appendLine(indentation.repeat(indent) + "[")
                 jsonNode.appendLine(buildJsonPiece(treeNode.subNodes, indent + 1))
                 jsonNode.appendLine(indentation.repeat(indent) + "]")
             }
 
-            NAMED_LIST -> {
+            NodeType.NAMED_LIST -> {
                 jsonNode.appendLine(indentation.repeat(indent) + "\"${treeNode.name}\": [")
                 if (treeNode.subNodes.isNotEmpty()) {
                     jsonNode.appendLine(indentation.repeat(indent + 1) + "{")
@@ -112,13 +113,13 @@ class JsonGenerator(private val typeChecker: TypeChecker) {
                 jsonNode.append(indentation.repeat(indent) + "]")
             }
 
-            COMPOSITE_OBJECT -> {
+            NodeType.COMPOSITE_OBJECT -> {
                 jsonNode.appendLine(indentation.repeat(indent) + "\"${treeNode.name}\": {")
                 jsonNode.appendLine(buildJsonPiece(treeNode.subNodes, indent + 1))
                 jsonNode.append(indentation.repeat(indent) + "}")
             }
 
-            SIMPLE_OBJECT -> {
+            NodeType.SIMPLE_OBJECT -> {
                 jsonNode.append(indentation.repeat(indent) + "\"${treeNode.name}\":")
             }
         }

@@ -1,5 +1,6 @@
-package be.sweetmustard.springrestdocsgenerator
+package be.sweetmustard.springrestdocsgenerator.generator
 
+import be.sweetmustard.springrestdocsgenerator.RestDocsHelper
 import be.sweetmustard.springrestdocsgenerator.settings.SpringRestDocsGeneratorState
 import com.intellij.ide.highlighter.JavaFileType
 import com.intellij.openapi.project.Project
@@ -11,7 +12,7 @@ import java.util.logging.Logger
 
 class TestFileGenerator {
     private val logger = Logger.getLogger(TestFileGenerator::class.java.name)
-    
+
     internal fun createOrGetDocumentationTestFile(
         restController: PsiClass,
         currentProject: Project,

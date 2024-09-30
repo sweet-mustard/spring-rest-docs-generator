@@ -1,5 +1,7 @@
-package be.sweetmustard.springrestdocsgenerator
+package be.sweetmustard.springrestdocsgenerator.generator
 
+import be.sweetmustard.springrestdocsgenerator.FieldDescription
+import be.sweetmustard.springrestdocsgenerator.TypeChecker
 import com.intellij.psi.PsiField
 import com.intellij.psi.PsiType
 import com.intellij.psi.impl.source.PsiClassReferenceType

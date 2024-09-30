@@ -1,5 +1,6 @@
-package be.sweetmustard.springrestdocsgenerator
+package be.sweetmustard.springrestdocsgenerator.generator
 
+import be.sweetmustard.springrestdocsgenerator.TypeChecker
 import be.sweetmustard.springrestdocsgenerator.settings.SpringRestDocsGeneratorState
 import com.intellij.psi.*
 import com.intellij.psi.util.PsiTypesUtil
@@ -15,8 +16,8 @@ class TestMethodGenerator(typeChecker: TypeChecker) {
     private val logger = Logger.getLogger(TestMethodGenerator::class.java.name)
     private val fieldDescriptionGenerator = FieldDescriptionGenerator(typeChecker)
     private val jsonGenerator = JsonGenerator(typeChecker)
-    
-    
+
+
     internal fun getOrCreateDocumentationTestMethod(
         selectedMethod: PsiMethod,
         documentationTestClass: PsiClass,

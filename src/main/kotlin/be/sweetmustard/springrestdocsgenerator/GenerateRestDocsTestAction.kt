@@ -2,6 +2,8 @@ package be.sweetmustard.springrestdocsgenerator
 
 import be.sweetmustard.springrestdocsgenerator.GenerateRestDocsTestAction.SelectionItemType.CREATE
 import be.sweetmustard.springrestdocsgenerator.GenerateRestDocsTestAction.SelectionItemType.JUMP
+import be.sweetmustard.springrestdocsgenerator.generator.TestFileGenerator
+import be.sweetmustard.springrestdocsgenerator.generator.TestMethodGenerator
 import be.sweetmustard.springrestdocsgenerator.settings.SpringRestDocsGeneratorSettings
 import be.sweetmustard.springrestdocsgenerator.settings.SpringRestDocsGeneratorState
 import com.intellij.codeInsight.hint.HintManager
