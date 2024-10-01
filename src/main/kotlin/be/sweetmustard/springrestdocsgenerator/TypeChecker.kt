@@ -30,7 +30,14 @@ class TypeChecker {
         .toList())
         .plus(PsiTypesUtil.getPsiClass(PsiTypes.voidType())?.qualifiedName)
 
-    fun isBasicType(classType: PsiType): Boolean {
+    fun isNestedType(classType: PsiType): Boolean {
+        return !isBasicType(classType) &&
+                !isMapType(classType) &&
+                !isJsonConvertibleType(classType) &&
+                !isEnumType(classType)
+    }
+
+    private fun isBasicType(classType: PsiType): Boolean {
         return basicTypes.stream()
             .anyMatch { PsiTypesUtil.getPsiClass(classType)?.qualifiedName == it }
     }
@@ -41,12 +48,12 @@ class TypeChecker {
     fun isResponseEntityType(responseObjectType: PsiType) =
         PsiTypesUtil.getPsiClass(responseObjectType)?.qualifiedName == "org.springframework.http.ResponseEntity"
 
-    fun isMapType(classType: PsiType) =
+    private fun isMapType(classType: PsiType) =
         PsiTypesUtil.getPsiClass(classType)?.qualifiedName == "java.util.Map"
 
-    fun isEnumType(classType: PsiType) = PsiTypesUtil.getPsiClass(classType)?.isEnum == true
+    private fun isEnumType(classType: PsiType) = PsiTypesUtil.getPsiClass(classType)?.isEnum == true
 
-    fun isJsonConvertibleType(psiType: PsiType?): Boolean {
+    private fun isJsonConvertibleType(psiType: PsiType?): Boolean {
         return jsonConvertibleTypes.stream()
             .anyMatch { PsiTypesUtil.getPsiClass(psiType)?.qualifiedName?.equals(it) == true }
     }

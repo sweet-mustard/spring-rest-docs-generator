@@ -20,9 +20,9 @@ class JsonGenerator(private val typeChecker: TypeChecker) {
     private fun generateTree(type: PsiType) =
         TreeNode("", generateLeaves(type, MAXIMAL_DEPTH), NodeType.ROOT)
 
-    private fun generateLeaves(field: PsiField, remainingDepth: Int): List<TreeNode> {
+    private fun generateLeaves(field: PsiField?, remainingDepth: Int): List<TreeNode> {
         val subNodes = ArrayList<TreeNode>()
-        if (remainingDepth < 0) {
+        if (remainingDepth < 0 || field == null) {
             return subNodes
         }
 
@@ -37,13 +37,8 @@ class JsonGenerator(private val typeChecker: TypeChecker) {
                     NodeType.NAMED_LIST
                 )
             )
-        } else if (!typeChecker.isBasicType(fieldType) && !typeChecker.isJsonConvertibleType(
-                fieldType
-            ) && !typeChecker.isEnumType(
-                fieldType
-            )
-        ) {
-            subNodes.add(
+        } else if (typeChecker.isNestedType(fieldType)) {
+            subNodes.add( 
                 TreeNode(
                     field.name,
                     generateLeaves(fieldType, remainingDepth - 1),
@@ -52,14 +47,13 @@ class JsonGenerator(private val typeChecker: TypeChecker) {
             )
         } else {
             subNodes.add(TreeNode(field.name, emptyList(), NodeType.SIMPLE_OBJECT))
-
         }
         return subNodes
     }
 
-    private fun generateLeaves(classType: PsiType, remainingDepth: Int): List<TreeNode> {
+    private fun generateLeaves(classType: PsiType?, remainingDepth: Int): List<TreeNode> {
         val subNodes = ArrayList<TreeNode>()
-        if (remainingDepth < 0) {
+        if (remainingDepth < 0 || classType == null) {
             return subNodes
         }
 
@@ -72,12 +66,7 @@ class JsonGenerator(private val typeChecker: TypeChecker) {
                     NodeType.UNNAMED_LIST
                 )
             )
-        } else if (!typeChecker.isBasicType(classType) && !typeChecker.isJsonConvertibleType(
-                classType
-            ) && !typeChecker.isEnumType(
-                classType
-            )
-        ) {
+        } else if (typeChecker.isNestedType(classType)) {
             subNodes.addAll(
                 PsiTypesUtil.getPsiClass(classType)?.fields!!.stream()
                     .map { generateLeaves(it, remainingDepth - 1) }

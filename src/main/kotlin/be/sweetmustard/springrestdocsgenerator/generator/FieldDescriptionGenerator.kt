@@ -45,7 +45,7 @@ class FieldDescriptionGenerator(private val typeChecker: TypeChecker) {
         return buildFieldsDescriptionString(requestFieldDescriptions, HttpObjectType.REQUEST)
     }
 
-    fun generateFieldDescriptions(
+    private fun generateFieldDescriptions(
         field: PsiField,
         pathPrefix: String,
         remainingDepth: Int
@@ -69,10 +69,7 @@ class FieldDescriptionGenerator(private val typeChecker: TypeChecker) {
             )
         } else {
             fieldDescriptions.add(FieldDescription(pathPrefix, field.name, description))
-            if (!typeChecker.isBasicType(fieldType) && !typeChecker.isMapType(fieldType) && !typeChecker.isJsonConvertibleType(
-                    fieldType
-                ) && !typeChecker.isEnumType(fieldType)
-            ) {
+            if (typeChecker.isNestedType(fieldType)) {
                 fieldDescriptions.addAll(
                     generateFieldDescriptions(
                         fieldType,
@@ -85,7 +82,7 @@ class FieldDescriptionGenerator(private val typeChecker: TypeChecker) {
         return fieldDescriptions
     }
 
-    fun generateFieldDescriptions(
+    private fun generateFieldDescriptions(
         classType: PsiType,
         pathPrefix: String,
         remainingDepth: Int
@@ -105,10 +102,7 @@ class FieldDescriptionGenerator(private val typeChecker: TypeChecker) {
                     remainingDepth - 1
                 )
             )
-        } else if (!typeChecker.isBasicType(classType) && !typeChecker.isMapType(classType) && !typeChecker.isJsonConvertibleType(
-                classType
-            ) && !typeChecker.isEnumType(classType)
-        ) {
+        } else if (typeChecker.isNestedType(classType)) {
             for (field in PsiTypesUtil.getPsiClass(classType)?.fields!!) {
                 fieldDescriptions.addAll(
                     generateFieldDescriptions(
@@ -122,7 +116,7 @@ class FieldDescriptionGenerator(private val typeChecker: TypeChecker) {
         return fieldDescriptions
     }
 
-    fun buildFieldsDescriptionString(
+    private fun buildFieldsDescriptionString(
         fieldDescriptions: List<FieldDescription>,
         httpObjectType: HttpObjectType
     ): String {
