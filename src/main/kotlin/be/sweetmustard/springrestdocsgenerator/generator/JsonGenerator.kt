@@ -3,6 +3,7 @@ package be.sweetmustard.springrestdocsgenerator.generator
 import be.sweetmustard.springrestdocsgenerator.NodeType
 import be.sweetmustard.springrestdocsgenerator.TreeNode
 import be.sweetmustard.springrestdocsgenerator.TypeChecker
+import com.intellij.psi.PsiArrayType
 import com.intellij.psi.PsiField
 import com.intellij.psi.PsiType
 import com.intellij.psi.impl.source.PsiClassReferenceType
@@ -37,8 +38,17 @@ class JsonGenerator(private val typeChecker: TypeChecker) {
                     NodeType.NAMED_LIST
                 )
             )
+        } else if (typeChecker.isArrayType(fieldType)) {
+            val parameterType = (fieldType as PsiArrayType).componentType
+            subNodes.add(
+                TreeNode(
+                    field.name,
+                    generateLeaves(parameterType, remainingDepth - 1),
+                    NodeType.NAMED_LIST
+                )
+            )
         } else if (typeChecker.isNestedType(fieldType)) {
-            subNodes.add( 
+            subNodes.add(
                 TreeNode(
                     field.name,
                     generateLeaves(fieldType, remainingDepth - 1),
@@ -59,6 +69,15 @@ class JsonGenerator(private val typeChecker: TypeChecker) {
 
         if (typeChecker.isListType(classType)) {
             val parameterType = (classType as PsiClassReferenceType).parameters[0]
+            subNodes.add(
+                TreeNode(
+                    "",
+                    generateLeaves(parameterType, remainingDepth - 1),
+                    NodeType.UNNAMED_LIST
+                )
+            )
+        } else if (typeChecker.isArrayType(classType)) {
+            val parameterType = (classType as PsiArrayType).componentType
             subNodes.add(
                 TreeNode(
                     "",
