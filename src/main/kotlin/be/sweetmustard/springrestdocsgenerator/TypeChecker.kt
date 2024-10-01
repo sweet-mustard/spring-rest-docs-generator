@@ -14,14 +14,18 @@ class TypeChecker {
 
     private var jsonConvertibleTypes: Set<String> = HashSet()
     private val basicTypes = listOf(
-        "java.lang.String",
+        "java.lang.Byte",
+        "java.lang.Short",
         "java.lang.Integer",
         "java.lang.Boolean",
-        "java.util.UUID",
         "java.lang.Long",
         "java.lang.Double",
+        "java.lang.Float",
+        "java.lang.Double",
+        "java.lang.String",
         "java.math.BigDecimal",
         "java.math.BigInteger",
+        "java.util.UUID",
         "java.time.LocalDate",
         "java.time.LocalDateTime",
         "java.time.ZonedDateTime",
