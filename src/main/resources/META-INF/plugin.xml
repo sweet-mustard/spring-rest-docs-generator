@@ -19,6 +19,13 @@
           displayName="Spring REST Docs Generator"/>
     </extensions>
 
+    <applicationListeners>
+        <listener
+          class="be.sweetmustard.springrestdocsgenerator.listener.UninstallListener"
+          topic="com.intellij.ide.plugins.DynamicPluginListener"/>
+    </applicationListeners>
+
+
     <actions>
         <action id="be.sweetmustard.springrestdocsgenerator.GenerateRestDocsTestAction"
           class="be.sweetmustard.springrestdocsgenerator.GenerateRestDocsTestAction"
