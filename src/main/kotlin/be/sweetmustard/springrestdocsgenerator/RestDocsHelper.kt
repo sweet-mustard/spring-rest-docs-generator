@@ -45,7 +45,7 @@ class RestDocsHelper {
             return packageName
         }
 
-        fun getDocumentationTestForMethod(currentMethod: PsiMethod): PsiMethod? {
+        fun getDocumentationTestForMethod(currentMethod: PsiMethod): Pair<PsiFile?, PsiMethod?> {
             val productionClass = currentMethod.containingClass!!
             val testSourceRoots = getPossibleTestSourceRoots(productionClass)
             for (testSourceRoot in testSourceRoots) {
@@ -60,10 +60,12 @@ class RestDocsHelper {
                         documentationTestClass,
                         PsiMethod::class.java
                     )
-                    return documentationTestMethods?.firstOrNull { it.name == currentMethod.name + "Example" }
+                    return Pair(
+                        correspondingDocumentationTestFile,
+                        documentationTestMethods?.firstOrNull { it.name == currentMethod.name + "Example" })
                 }
             }
-            return null
+            return Pair(null, null)
         }
 
         private fun getPossibleTestSourceRoots(productionClass: PsiClass): List<VirtualFile> {

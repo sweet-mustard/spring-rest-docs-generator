@@ -1,7 +1,6 @@
 package be.sweetmustard.springrestdocsgenerator
 
-import be.sweetmustard.springrestdocsgenerator.GenerateRestDocsTestAction.SelectionItemType.CREATE
-import be.sweetmustard.springrestdocsgenerator.GenerateRestDocsTestAction.SelectionItemType.JUMP
+import be.sweetmustard.springrestdocsgenerator.GenerateRestDocsTestAction.SelectionItemType.*
 import be.sweetmustard.springrestdocsgenerator.generator.TestFileGenerator
 import be.sweetmustard.springrestdocsgenerator.generator.TestMethodGenerator
 import be.sweetmustard.springrestdocsgenerator.settings.SpringRestDocsGeneratorSettings
@@ -16,10 +15,7 @@ import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.psi.JavaPsiFacade
-import com.intellij.psi.PsiClass
-import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiMethod
+import com.intellij.psi.*
 import com.intellij.psi.util.childrenOfType
 import com.intellij.psi.util.parentOfType
 import com.intellij.ui.ColoredListCellRenderer
@@ -82,14 +78,28 @@ class GenerateRestDocsTestAction : AnAction() {
         event: AnActionEvent,
         projectState: SpringRestDocsGeneratorState
     ) {
-        val documentationTest =
+        val (documentationTestFile: PsiFile?, documentationTest: PsiMethod?) =
             RestDocsHelper.getDocumentationTestForMethod(selectedMethod)
         val items = if (documentationTest != null) {
             listOf(
-                SelectionItem(JUMP, "Jump to " + documentationTest.name, documentationTest),
+                SelectionItem(
+                    JUMP,
+                    "Jump to " + documentationTest.name,
+                    documentationTestFile,
+                    documentationTest
+                ),
             )
+        } else if (documentationTestFile != null) {
+            listOf(
+                SelectionItem(
+                    CREATE_NEW_TEST,
+                    "Create new Documentation Test ...",
+                    documentationTestFile,
+                    null
+                )
+            )    
         } else {
-            listOf(SelectionItem(CREATE, "Create new Documentation Test ...", null))
+            listOf(SelectionItem(CREATE_NEW_FILE, "Create new Documentation Test ...", null, null))
         }
 
         JBPopupFactory.getInstance().createPopupChooserBuilder(items)
@@ -110,7 +120,7 @@ class GenerateRestDocsTestAction : AnAction() {
             .setItemChosenCallback {
                 when (it.type) {
                     JUMP -> it.method!!.navigate(true)
-                    CREATE -> getTestSourcesRoot(selectedMethod, event) { testSourceRoot ->
+                    CREATE_NEW_FILE -> getTestSourcesRoot(selectedMethod, event) { testSourceRoot ->
                         WriteCommandAction.runWriteCommandAction(
                             currentProject,
                             it.title,
@@ -120,6 +130,22 @@ class GenerateRestDocsTestAction : AnAction() {
                                     selectedMethod,
                                     currentProject,
                                     testSourceRoot,
+                                    projectState
+                                )
+                            }
+                        )
+                    }
+
+                    CREATE_NEW_TEST -> {
+                        WriteCommandAction.runWriteCommandAction(
+                            currentProject,
+                            it.title,
+                            "",
+                            {
+                                generateRestDocumentationTest(
+                                    selectedMethod,
+                                    currentProject,
+                                    it.testFile!!,
                                     projectState
                                 )
                             }
@@ -180,16 +206,42 @@ class GenerateRestDocsTestAction : AnAction() {
     ) {
         val elementFactory = JavaPsiFacade.getInstance(currentProject).elementFactory
 
-        val restController = selectedMethod.parentOfType<PsiClass>()!!
-
         val documentationTestFile = testFileGenerator.createOrGetDocumentationTestFile(
-            restController,
+            selectedMethod.parentOfType<PsiClass>()!!,
             currentProject,
             testSourceRoot,
             elementFactory,
             projectState
         )
 
+        generateRestDocumentationTest(
+            selectedMethod,
+            documentationTestFile,
+            projectState,
+            elementFactory
+        )
+    }
+
+    private fun generateRestDocumentationTest(
+        selectedMethod: PsiMethod,
+        currentProject: Project,
+        documentationTestFile: PsiFile,
+        projectState: SpringRestDocsGeneratorState
+    ) {
+        generateRestDocumentationTest(
+            selectedMethod,
+            documentationTestFile,
+            projectState,
+            JavaPsiFacade.getInstance(currentProject).elementFactory
+        )
+    }
+
+    private fun generateRestDocumentationTest(
+        selectedMethod: PsiMethod,
+        documentationTestFile: PsiFile,
+        projectState: SpringRestDocsGeneratorState,
+        elementFactory: PsiElementFactory
+    ) {
         val documentationTestClass = documentationTestFile.childrenOfType<PsiClass>()[0]
 
         testMethodGenerator.addMockMvcFieldIfMissing(elementFactory, documentationTestClass)
@@ -208,6 +260,7 @@ class GenerateRestDocsTestAction : AnAction() {
     data class SelectionItem(
         val type: SelectionItemType,
         val title: String,
+        val testFile: PsiFile?,
         val method: PsiMethod?
     ) {
         fun getIcon(): Icon {
@@ -220,7 +273,8 @@ class GenerateRestDocsTestAction : AnAction() {
     }
 
     enum class SelectionItemType {
-        CREATE,
+        CREATE_NEW_FILE,
+        CREATE_NEW_TEST,
         JUMP
     }
 }
