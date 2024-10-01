@@ -13,30 +13,36 @@ class TypeChecker {
 
     private var jsonConvertibleTypes: Set<String> = HashSet()
     private val basicTypes = listOf(
-        "String",
-        "Integer",
-        "Boolean",
-        "UUID",
-        "Long",
-        "Double",
-        "BigDecimal",
-        "BigInteger",
-        "LocalDate",
-        "LocalDateTime",
-        "ZonedDateTime"
-    ).union(PsiTypes.primitiveTypes().stream().map { it.name }.toList())
-        .plus(PsiTypes.voidType().name)
+        "java.lang.String",
+        "java.lang.Integer",
+        "java.lang.Boolean",
+        "java.util.UUID",
+        "java.lang.Long",
+        "java.lang.Double",
+        "java.math.BigDecimal",
+        "java.math.BigInteger",
+        "java.time.LocalDate",
+        "java.time.LocalDateTime",
+        "java.time.ZonedDateTime",
+        "java.time.Instant",
+        "java.time.Duration"
+    ).union(PsiTypes.primitiveTypes().stream().map { PsiTypesUtil.getPsiClass(it)?.qualifiedName }
+        .toList())
+        .plus(PsiTypesUtil.getPsiClass(PsiTypes.voidType())?.qualifiedName)
 
     fun isBasicType(classType: PsiType): Boolean {
-        return basicTypes.stream().anyMatch { classType.toString().contains(it) }
+        return basicTypes.stream()
+            .anyMatch { PsiTypesUtil.getPsiClass(classType)?.qualifiedName == it }
     }
 
-    fun isListType(classType: PsiType) = classType.toString().contains("List")
+    fun isListType(classType: PsiType) =
+        PsiTypesUtil.getPsiClass(classType)?.qualifiedName == "java.util.List"
 
     fun isResponseEntityType(responseObjectType: PsiType) =
-        responseObjectType.toString().contains("ResponseEntity")
+        PsiTypesUtil.getPsiClass(responseObjectType)?.qualifiedName == "org.springframework.http.ResponseEntity"
 
-    fun isMapType(classType: PsiType) = classType.toString().contains("Map")
+    fun isMapType(classType: PsiType) =
+        PsiTypesUtil.getPsiClass(classType)?.qualifiedName == "java.util.Map"
 
     fun isEnumType(classType: PsiType) = PsiTypesUtil.getPsiClass(classType)?.isEnum == true
 
