@@ -37,7 +37,6 @@ class TestMethodGenerator(typeChecker: TypeChecker) {
                 elementFactory.createMethod(documentationTestName, PsiTypes.voidType())
 
             PsiUtil.addException(documentationTestMethod, "Exception")
-            documentationTestMethod.modifierList.addAnnotation("Test")
             for (annotation in projectState.restControllerDocumentationTestMethodAnnotations.reversed()) {
                 documentationTestMethod.modifierList.addAnnotation(
                     annotation.replace(
@@ -46,6 +45,7 @@ class TestMethodGenerator(typeChecker: TypeChecker) {
                     ).trim()
                 )
             }
+            documentationTestMethod.modifierList.addAnnotation("Test")
 
             PsiUtil.setModifierProperty(documentationTestMethod, PsiModifier.PACKAGE_LOCAL, true)
 
