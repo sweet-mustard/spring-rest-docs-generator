@@ -2,6 +2,7 @@ package be.sweetmustard.springrestdocsgenerator.generator
 
 import be.sweetmustard.springrestdocsgenerator.FieldDescription
 import be.sweetmustard.springrestdocsgenerator.TypeChecker
+import com.intellij.psi.PsiArrayType
 import com.intellij.psi.PsiField
 import com.intellij.psi.PsiType
 import com.intellij.psi.impl.source.PsiClassReferenceType
@@ -55,10 +56,10 @@ class FieldDescriptionGenerator(private val typeChecker: TypeChecker) {
             return fieldDescriptions
         }
         val fieldType = field.type
-        val description = ""
 
+        fieldDescriptions.add(FieldDescription(pathPrefix, field.name, ""))
+        
         if (typeChecker.isListType(fieldType)) {
-            fieldDescriptions.add(FieldDescription(pathPrefix, field.name, description))
             val parameterType = (fieldType as PsiClassReferenceType).parameters[0]!!
             fieldDescriptions.addAll(
                 generateFieldDescriptions(
@@ -67,9 +68,16 @@ class FieldDescriptionGenerator(private val typeChecker: TypeChecker) {
                     remainingDepth - 1
                 )
             )
-        } else {
-            fieldDescriptions.add(FieldDescription(pathPrefix, field.name, description))
-            if (typeChecker.isNestedType(fieldType)) {
+        } else if (typeChecker.isArrayType(fieldType)) {
+            val parameterType = (fieldType as PsiArrayType).componentType
+            fieldDescriptions.addAll(
+                generateFieldDescriptions(
+                    parameterType,
+                    pathPrefix + field.name + "[].",
+                    remainingDepth - 1
+                )
+            )
+        } else if (typeChecker.isNestedType(fieldType)) {
                 fieldDescriptions.addAll(
                     generateFieldDescriptions(
                         fieldType,
@@ -78,7 +86,6 @@ class FieldDescriptionGenerator(private val typeChecker: TypeChecker) {
                     )
                 )
             }
-        }
         return fieldDescriptions
     }
 
@@ -95,6 +102,16 @@ class FieldDescriptionGenerator(private val typeChecker: TypeChecker) {
         if (typeChecker.isListType(classType)) {
             fieldDescriptions.add(FieldDescription(pathPrefix, "[]", ""))
             val parameterType = (classType as PsiClassReferenceType).parameters[0]
+            fieldDescriptions.addAll(
+                generateFieldDescriptions(
+                    parameterType,
+                    "$pathPrefix[].",
+                    remainingDepth - 1
+                )
+            )
+        } else if (typeChecker.isArrayType(classType)) {
+            fieldDescriptions.add(FieldDescription(pathPrefix, "[]", ""))
+            val parameterType = (classType as PsiArrayType).componentType
             fieldDescriptions.addAll(
                 generateFieldDescriptions(
                     parameterType,

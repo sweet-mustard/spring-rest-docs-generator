@@ -2,6 +2,7 @@ package be.sweetmustard.springrestdocsgenerator
 
 import com.intellij.openapi.project.Project
 import com.intellij.psi.JavaPsiFacade
+import com.intellij.psi.PsiArrayType
 import com.intellij.psi.PsiType
 import com.intellij.psi.PsiTypes
 import com.intellij.psi.search.GlobalSearchScope
@@ -44,6 +45,8 @@ class TypeChecker {
 
     fun isListType(classType: PsiType) =
         PsiTypesUtil.getPsiClass(classType)?.qualifiedName == "java.util.List"
+
+    fun isArrayType(classType: PsiType) = classType is PsiArrayType
 
     fun isResponseEntityType(responseObjectType: PsiType) =
         PsiTypesUtil.getPsiClass(responseObjectType)?.qualifiedName == "org.springframework.http.ResponseEntity"
