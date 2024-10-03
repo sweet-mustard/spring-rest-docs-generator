@@ -244,9 +244,7 @@ class TestMethodGenerator(typeChecker: TypeChecker) {
                 ?.filter {
                     it.qualifiedName?.contains("org.springframework.web.bind.annotation")
                         ?: false
-                }
-                ?.filter { it.qualifiedName?.contains("Mapping") ?: false }
-                ?.get(0)
+                }?.firstOrNull { it.qualifiedName?.contains("Mapping") ?: false }
         return requestMappingClassLevel
     }
 
@@ -262,11 +260,12 @@ class TestMethodGenerator(typeChecker: TypeChecker) {
         return requestMappingMethodLevel
     }
 
-    private fun getUriFromAnnotation(requestMappingClassLevel: PsiAnnotation?): String? {
+    private fun getUriFromAnnotation(annotation: PsiAnnotation?): String? {
+        if (annotation == null) {
+            return ""
+        }
         val uri =
-            requestMappingClassLevel?.parameterList?.attributes
-                ?.filter { it.name == null || it.name == "value" || it.name == "path" }
-                ?.getOrNull(0)
+            annotation.parameterList.attributes.firstOrNull { it.name == null || it.name == "value" || it.name == "path" }
         if (uri == null) {
             return ""
         }
