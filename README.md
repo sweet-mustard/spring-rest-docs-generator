@@ -5,10 +5,11 @@
 [![Downloads](https://img.shields.io/jetbrains/plugin/d/MARKETPLACE_ID.svg)](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID)
 
 <!-- Plugin description -->
-The Spring REST Docs Generator IntelliJ-based plugin allows generating Spring REST Documentation tests. 
+The Spring REST Docs Generator plugin enables easier generation of documentation tests for REST
+endpoints.
 
-After installing the plugin, you can generate a Spring REST Documentation test via the Tools > Generate Spring REST Docs menu item.
-Based on the selected endpoint, the plugin will generate a skeleton for the corresponding
+With an endpoint selected, choosing <kbd>Tools</kbd> > <kbd>Generate Spring REST Docs</kbd> will
+generate a skeleton for the corresponding
 documentation test.
 
 The development of this plugin is proudly sponsored by [Sweet Mustard](https://www.sweetmustard.be/).
