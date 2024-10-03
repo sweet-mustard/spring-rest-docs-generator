@@ -153,7 +153,8 @@ class TestMethodGenerator(typeChecker: TypeChecker) {
 
         if (queryParameters.isNotEmpty()) {
             methodBodyBuilder.appendLine()
-            methodBodyBuilder.appendLine(queryParameters.stream()
+            methodBodyBuilder.append(
+                queryParameters.stream()
                 .map { param -> ".param(\"${param.name}\", )" }
                 .reduce { a, b -> a + System.lineSeparator() + b }
                 .orElse(""))
@@ -164,9 +165,7 @@ class TestMethodGenerator(typeChecker: TypeChecker) {
 
             methodBodyBuilder.openParenthesis()
             methodBodyBuilder.append(requestObjectType?.let {
-                jsonGenerator.generateJsonRequestBody(
-                    it
-                )
+                jsonGenerator.generateJsonRequestBody(it)
             })
             methodBodyBuilder.closeParenthesis()
         }
