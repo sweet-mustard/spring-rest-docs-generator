@@ -8,7 +8,7 @@
 The Spring REST Docs Generator plugin enables easier generation of documentation tests for REST
 endpoints.
 
-With an endpoint selected, choosing <kbd>Tools</kbd> > <kbd>Generate Spring REST Docs</kbd> will
+With an endpoint selected, choosing Tools > Generate Spring REST Docs will
 generate a skeleton for the corresponding
 documentation test.
 
